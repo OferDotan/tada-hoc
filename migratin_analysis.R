@@ -46,6 +46,14 @@ agenda_text_filter <- filter(speeches, grepl(paste(toMatch,collapse="|"), agenda
 
 speechcorp <- corpus(agenda_text_filter)
 
+# create dfm
+speech_dfm <- dfm(speechcorp, 
+                  remove_punct = TRUE,
+                  remove = stopwords(),
+                  remove_symbols = TRUE,
+                  remove_separators = TRUE,
+                  split_hyphens = TRUE,
+                  remove_numbers = TRUE)
 
 
 ########

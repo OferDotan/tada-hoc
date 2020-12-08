@@ -56,6 +56,20 @@ speech_dfm <- dfm(speechcorp,
                   remove_numbers = TRUE)
 
 
+
+################
+# Topic Models #
+################
+
+# fit a simple model
+mod <- stm(speech_dfm, K = 6, seed = 12345)
+labelTopics(mod)
+plot(mod, type = "labels", labeltype = "prob") # or frex, lift, score
+
+
+
+
+
 ########
 # KWIC #
 ########
@@ -95,17 +109,6 @@ textplot_wordcloud(kwic_dfm, max_words = 90, color = c('blue','purple','orange')
 
 
 
-
-
-
-################
-# Topic Models #
-################
-
-# fit a simple model
-mod <- stm(speech_dfm, K = 6, seed = 12345)
-labelTopics(mod)
-plot(mod, type = "labels", labeltype = "prob") # or frex, lift, score
 
 
 

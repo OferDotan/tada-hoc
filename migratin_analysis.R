@@ -34,8 +34,14 @@ speeches <- Corp_HouseOfCommons_V2 %>%
   select(!c(iso3country, party.facts.id, parliament)) %>%
   filter(date>"2009-12-20")
 
+#subset to speeches that either contain or are termed (agenda) as "immigra*", "refugee*" or "asylum" (according to v.D)
+
+toMatch <- c("immigra*","Immigra*","refugee*","Refugee*","asylum","Asylum")
+speeches_imm <- filter(speeches, grepl(paste(toMatch,collapse="|"), agenda) | grepl(paste(toMatch,collapse="|"), text))
+
+
 #turn into corpus
-speechcorp <- corpus(speeches)
+speechcorp <- corpus(speeches_imm)
 
 #summary
 summary(speechcorp)

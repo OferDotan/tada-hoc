@@ -101,17 +101,9 @@ textplot_wordcloud(kwic_dfm, max_words = 90, color = c('blue','purple','orange')
 ################
 # Topic Models #
 ################
-img_dfm <- dfm(speechcorp, 
-               remove_punct = TRUE,
-               remove = stopwords(),
-               remove_symbols = TRUE,
-               remove_separators = TRUE,
-               split_hyphens = TRUE,
-               remove_numbers = TRUE)
 
-##Topic modeling 
 # fit a simple model
-mod <- stm(img_dfm, K = 6, seed = 12345)
+mod <- stm(speech_dfm, K = 6, seed = 12345)
 labelTopics(mod)
 plot(mod, type = "labels", labeltype = "prob") # or frex, lift, score
 

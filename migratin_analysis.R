@@ -7,7 +7,17 @@ library(tidyverse)
 library(data.table)
 library(stm)
 
+########
+# Brainstorm: Research Questions. 
 
+# Which issues related to immigration should be prioritized? (priotisation based on contentiousness --> extreme (+|-) divergence of sentiments from the mean)
+# Prevalence of sentiment across parties. 
+# How do topics shape sentiments? (correlation of topics and sentiments in parliamentary discourse related to immigration) 
+
+# 2x2 Matrix: Threat vs. Need | Active vs Passive
+# Observable shifts from positive passive (dependent, needy migrants) to positive/active (people with value to be included). 
+# At the same time: Shift from negative/active (security and cultural threat) to negative/passive (economic and social weight).
+# Hypo: We'll assume to see a shift from X to Y ... and operationalise this by looking at active vs. passive. 
 
 #############
 # LOAD DATA #

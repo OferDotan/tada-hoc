@@ -175,7 +175,21 @@ ggplot(count_months, aes(x=month, y=frequency))+
 # sentrement (line graph) 
 # migrants as passive "bystanders" vs. active 
 
+library(SentimentAnalysis)
 
+#sentiment analysis
+sentiments <- analyzeSentiment(speechcorp)
+convertToBinaryResponse(sentiments)$SentimentQDAP #built in sentimet dict 
+
+# View sentiment direction (i.e. positive, neutral and negative)
+convertToDirection(sentiments$SentimentQDAP)
+# Line plot with sentiment scores
+plotSentiment(sentiments, x = NULL, cumsum = FALSE, xlab = "",
+              ylab = "Sentiment")
+
+#Scatterplot with trend line between sentiment and response
+plotSentimentResponse(sentiments, response, smoothing = "gam",
+                      xlab = "Sentiment", ylab = "Response")
 
 
 

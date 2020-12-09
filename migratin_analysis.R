@@ -6,6 +6,10 @@ library(readtext)
 library(tidyverse)
 library(data.table)
 library(stm)
+library(dplyr)
+library(ggplot2)
+library(lubridate)
+
 
 ########
 # Brainstorm: Research Questions. 
@@ -39,7 +43,7 @@ speeches <- Corp_HouseOfCommons_V2 %>%
 
 #content/terms: subset to speeches that either contain or termed (agenda) as "immigra*", "refugee*" or "asylum" (according to v.D)
 
-toMatch <- c("immigra*","Immigra*","refugee*","Refugee*","asylum","Asylum", " migra*"," Migra*")
+toMatch <- c("immigra*","Immigra*","refugee*","Refugee*","asylum","Asylum"," migra*"," Migra*")
 agenda_text_filter <- filter(speeches, grepl(paste(toMatch,collapse="|"), agenda) | grepl(paste(toMatch,collapse="|"), text))
 
 # create corpus
@@ -73,7 +77,6 @@ plot(mod, type = "labels", labeltype = "prob") # or frex, lift, score
 ########
 # KWIC #
 ########
-# Write code in a way to make sure that bubbles of individual keywords don't overlap and double count. 
 
 kw_immigration <- kwic(speechcorp, paste(toMatch,collapse="|"), window = 20)
 install.packages("xtable")
@@ -103,7 +106,23 @@ textplot_wordcloud(kwic_dfm, max_words = 90, color = c('blue','purple','orange')
 ################
 # DESCRIPTIVES #
 ################
-# density plot: prevalence of immigration debates over time (vertical line at 07.05.2015 = general election & vertical line at 23.06.2016 = Brexit referendum)
+# plot: prevalence of immigration debates over time (vertical line at 07.05.2015 = general election & vertical line at 23.06.2016 = Brexit referendum)
+
+agenda_text_filter$date <- as.Date(agenda_text_filter$date, format="%Y-%m-%d")
+count_months = agenda_text_filter %>% group_by(month=floor_date(date, "month")) %>% summarise(frequency = n())
+
+ggplot(count_months, aes(x=month, y=frequency))+
+  geom_area( fill="#69b3a2", alpha=0.4) +
+  geom_line(color="#69b3a2") +
+  ggtitle("Prevalence of Immigration debates")+
+  geom_vline(xintercept = as.Date("2015-05-07"), linetype = "dashed")+ #general election 2015
+  geom_vline(xintercept = as.Date("2016-06-23"), linetype = "dashed", color = "red")+ # Brexit referendum
+  theme(axis.text.x = element_text(angle = 90))
+
+
+
+
+
 # density ridge plot: topic evolution over time (time = X, topic = Y) 
 ## Hypo: we see more debates before events like election/referendum
 

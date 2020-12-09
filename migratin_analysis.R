@@ -9,7 +9,8 @@ library(stm)
 library(dplyr)
 library(ggplot2)
 library(lubridate)
-
+library(lme4)
+library(lattice)
 
 ########
 # Brainstorm: Research Questions. 
@@ -27,7 +28,7 @@ library(lubridate)
 # LOAD DATA #
 #############
 
-Corp_HouseOfCommons_V2  <- readRDS("~/Desktop/tada-hoc/Corp_HouseOfCommons_V2.rds")
+Corp_HouseOfCommons_V2  <- readRDS("~/Desktop/Corp_HouseOfCommons_V2.rds")
 names(Corp_HouseOfCommons_V2)
 
 ##############
@@ -65,14 +66,29 @@ speech_dfm <- dfm(speechcorp,
 # Topic Models #
 ################
 
-# fit a simple model
-mod <- stm(speech_dfm, K = 6, seed = 12345)
-labelTopics(mod)
-plot(mod, type = "labels", labeltype = "prob") # or frex, lift, score
+# fit a simple model with 6 topics
+mod_1 <- stm(speech_dfm, K = 6, seed = 12345)
+labelTopics(mod_1)
+plot(mod_1, type = "labels", labeltype = "prob") # or frex, lift, score
 
+# check if topics are exclusive
+dotchart(exclusivity(mod_1), labels = 1:6)
 
+# check if topics are coherent
+cohere <- semanticCoherence(mod, speech_dfm)
+dotchart(cohere, labels = 1:6) 
 
+# fit a simple model with 12 topics
+mod_2 <- stm(speech_dfm, K = 12, seed = 12345)
+labelTopics(mod_2)
+plot(mod_2, type = "labels", labeltype = "prob") # or frex, lift, score
 
+# check if topics are exclusive 
+dotchart(exclusivity(mod_2), labels = 1:12)
+
+#check if topics are coherent
+cohere <- semanticCoherence(mod_2, speech_dfm)
+dotchart(cohere, labels = 1:12)
 
 ########
 # KWIC #
@@ -99,8 +115,21 @@ kwic_dfm <- dfm(corp_kwic,
                 remove_numbers = TRUE)
 
 # wordcloud
-textplot_wordcloud(kwic_dfm, max_words = 90, color = c('blue','purple','orange'))
+textplot_wordcloud(kwic_dfm, max_words = 90, color = rev(RColorBrewer::brewer.pal(10, "RdBu")))
 
+
+## removing also key words to see what is left
+key_words <- c("immigra*","Immigra*","refugee*","Refugee*","asylum","Asylum"," migra*"," Migra*")
+kwic_dfm_no_key <- dfm(corp_kwic,
+                       remove_punct = TRUE,
+                       remove = c(as.vector(key_words),stopwords()),
+                       remove_symbols = TRUE,
+                       remove_separators = TRUE,
+                       split_hyphens = TRUE,
+                       remove_numbers = TRUE)
+
+# wordcloud no key words
+textplot_wordcloud(kwic_dfm_no_key, max_words = 90, color = rev(RColorBrewer::brewer.pal(10, "RdBu")))
 
 
 ################
@@ -118,7 +147,6 @@ ggplot(count_months, aes(x=month, y=frequency))+
   geom_vline(xintercept = as.Date("2015-05-07"), linetype = "dashed")+ #general election 2015
   geom_vline(xintercept = as.Date("2016-06-23"), linetype = "dashed", color = "red")+ # Brexit referendum
   theme(axis.text.x = element_text(angle = 90))
-
 
 
 

@@ -140,6 +140,8 @@ ggplot(longdf_theta,aes(x=date, y=theta)) +
 ## ideas: - use means or proportions of thetas instead of thetas themselves
 ##        - aggregate by month instead of using simple date
 ##        - possibly color by party?
+##        - predict topics by agenda 
+##        - use topics as a basis and do sentiment by topic
 
 -----------------------
 #### for 12 topics ####

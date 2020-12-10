@@ -53,6 +53,9 @@ agenda_text_filter <- filter(speeches, grepl(paste(toMatch,collapse="|"), agenda
 # create corpus
 
 speechcorp <- corpus(agenda_text_filter)
+install.packages("tm")
+library(tm)
+
 
 # create dfm
 speech_dfm <- dfm(speechcorp, 
@@ -62,6 +65,8 @@ speech_dfm <- dfm(speechcorp,
                   remove_separators = TRUE,
                   split_hyphens = TRUE,
                   remove_numbers = TRUE)
+
+test <- convert(speech_dfm, to ="data.frame")
 
 
 ################
@@ -180,9 +185,6 @@ kwic_dfm <- dfm(corp_kwic,
                 remove_separators = TRUE,
                 split_hyphens = TRUE,
                 remove_numbers = TRUE)
-
-
-# test <- convert(kwic_dfm_no_key, to = "data.frame", omit_empty = TRUE, docid_field = "doc_id", docvars = NULL) STILL NEEDED: Remove stopwords and keywords and transform back into dataframe (kwic_df)
 
 
 # wordcloud incl. keywords

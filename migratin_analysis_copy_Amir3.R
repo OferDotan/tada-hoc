@@ -31,10 +31,12 @@ library(ggridges)
 #############
 # LOAD DATA #
 #############
+setwd("C:/Users/amirf/Desktop/tada-hoc")
 
-Corp_HouseOfCommons_V2  <- readRDS("~/Desktop/tada-hoc/Corp_HouseOfCommons_V2.rds")
+Corp_HouseOfCommons_V2  <- readRDS("Corp_HouseOfCommons_V2.rds")
+
 names(Corp_HouseOfCommons_V2)
-
+head(Corp_HouseOfCommons_V2$date)
 ##############
 # SUBSETTING #
 ##############
@@ -43,7 +45,7 @@ names(Corp_HouseOfCommons_V2)
 
 #year: subset to speeches from 2010 (Justification:Tory manifesto)
 speeches <- Corp_HouseOfCommons_V2 %>% 
-  select(!c(iso3country, party.facts.id, parliament)) %>%
+  select(-c(iso3country, party.facts.id, parliament)) %>%
   filter(date>"2009-12-20")
 
 #content/terms: subset to speeches that either contain or termed (agenda) as "immigra*", "refugee*" or "asylum" (according to v.D)
@@ -91,7 +93,7 @@ dotchart(cohere, labels = 1:6)
 speech_dfm_subs <- dfm_subset(speech_dfm, rowSums(speech_dfm)>0)
 
 # combine stm thetas with dfm docvars
-df_theta <- as.data.frame(mod$theta)%>%
+df_theta <- as.data.frame(mod_1$theta)%>%
   cbind(docvars(speech_dfm_subs))
 
 ### naming topics
@@ -134,7 +136,23 @@ party_topic_plot1
 ##### Visualization: topic prevelance over time 
 longdf_theta <- pivot_longer(df_theta, cols = names(df_theta[1:6]), names_to = "topic",values_to = "theta")
 
+
 ggplot(longdf_theta,aes(x=date, y=theta)) + 
+  geom_point() +
+  geom_line() +
+  facet_grid(topic ~ .)
+
+# date to month.year (mutate), group by month.year, summarize mean of theata, calculate proportion of theta means by topic
+longdf_theta_month <- longdf_theta %>%
+  group_by(month=floor_date(date, "month")) %>% # date to month probably doesnt work here...
+  summarise(theta.means = mean(theta))
+
+#########
+# mutate(year.month = str_c(str_split(date, "-")[1:2]))
+#########
+
+# plot proportions over month.years
+ggplot(longdf_prop,aes(x=date, y=theta.means)) + 
   geom_point() +
   geom_line() +
   facet_grid(topic ~ .)

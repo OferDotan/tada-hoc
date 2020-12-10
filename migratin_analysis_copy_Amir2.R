@@ -75,26 +75,14 @@ plot(mod, type = "labels", labeltype = "prob") # or frex, lift, score
 # wordcloud
 cloud(mod, topic = 6, max_words = 90, color = c('blue','purple','orange'))
 
-# Visualizations: topics of migration language by party (see code from assignment 2)
+### Visualization: topic proportions by party 
 
 # Filtering out empty documents from speech_dfm to match the documents selected by STM so that data can be combined
 speech_dfm_subs <- dfm_subset(speech_dfm, rowSums(speech_dfm)>0)
-head(mod$vocab)
-docvars(speech_dfm)
-# combine stm vocab with dfm docvars
-df_vocab <- as.data.frame(mod$vocab)
-head(mod)
-plot(mod, type = "labels", labeltype = "frex") # or frex, lift, score
-mod$
-#%>%
-# cbind(docvars(speech_dfm_subs))
-
 
 # combine stm thetas with dfm docvars
 df_theta <- as.data.frame(mod$theta)%>%
   cbind(docvars(speech_dfm_subs))
-
-names(df_theta)
 
 #combine first 3 labels as a string for a new label
 topic_names <- c()
@@ -150,9 +138,12 @@ M <- gather(dft,topic,value,-id,-date,-origin) %>%
   summarize(value=mean(value))
 
 longdf_theta_mean <- group_by(topic,date) %>%
-  summarize(value=mean(value))
+  summarize(thetamean=mean(theta))
 
-ggplot(longdf_theta_mean,aes(x=date, y=theta)) + 
+##### topics over time
+longdf_theta <- pivot_longer(df_theta, cols = names(df_theta[1:6]), names_to = "topic",values_to = "theta")
+
+ggplot(longdf_theta,aes(x=date, y=theta)) + 
   geom_point() +
   geom_line() +
   facet_grid(topic ~ .)

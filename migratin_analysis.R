@@ -277,7 +277,7 @@ Corp_HouseOfCommons_V2$agenda["migration"]
 
 ## just to check what the sentiment analysis does: 
 
-text <- data.frame(text =c("nice","evil"))
+text <- data.frame(text =c("nice","evil","and"))
 text <- corpus(text)
 sent_text <- textstat_polarity(text, 
                                data_dictionary_LSD2015)

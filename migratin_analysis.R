@@ -3,6 +3,7 @@ library(readr)
 library(quanteda)
 library(quanteda.textmodels)
 library(quanteda.sentiment)
+library(quanteda.textstats)
 library(readtext)
 library(tidyverse)
 library(data.table)
@@ -12,7 +13,6 @@ library(ggplot2)
 library(lubridate)
 library(lme4)
 library(lattice)
-library(quanteda.textstats)
 
 ########
 # Brainstorm: Research Questions. 

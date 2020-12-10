@@ -13,6 +13,8 @@ library(ggplot2)
 library(lubridate)
 library(lme4)
 library(lattice)
+library(wordcloud)
+library(ggridges)
 
 ########
 # Brainstorm: Research Questions. 
@@ -71,7 +73,10 @@ speech_dfm <- dfm(speechcorp,
 # fit a simple model with 6 topics
 mod_1 <- stm(speech_dfm, K = 6, seed = 12345)
 labelTopics(mod_1)
-plot(mod_1, type = "labels", labeltype = "prob") # or frex, lift, score
+#plot(mod_1, type = "labels", labeltype = "prob") # or frex, lift, score
+
+# wordcloud
+cloud(mod, topic = 6, max_words = 90, color = c('blue','purple','orange'))
 
 # check if topics are exclusive
 dotchart(exclusivity(mod_1), labels = 1:6)
@@ -80,10 +85,72 @@ dotchart(exclusivity(mod_1), labels = 1:6)
 cohere <- semanticCoherence(mod, speech_dfm)
 dotchart(cohere, labels = 1:6) 
 
+### Visualization: topic proportions by party 
+
+# Filtering out empty documents from speech_dfm to match the documents selected by STM so that data can be combined
+speech_dfm_subs <- dfm_subset(speech_dfm, rowSums(speech_dfm)>0)
+
+# combine stm thetas with dfm docvars
+df_theta <- as.data.frame(mod$theta)%>%
+  cbind(docvars(speech_dfm_subs))
+
+### naming topics
+#combine first 3 labels as a string for a new label
+topic_names <- c()
+for (topicnumber in topic_labels$topicnums){
+  first_3<-(str_c(topic_labels$frex[topicnumber,1], 
+                  ", " , topic_labels$frex[topicnumber,2], 
+                  ", " , topic_labels$frex[topicnumber,3]))
+  topic_names<- append(topic_names, first_3)
+}
+
+# renaming columns
+names(df_theta)[1:6] <- topic_names
+###
+
+# grouping by party and generating means 
+df_party <- df_theta %>%
+  group_by(party)
+
+df_party_mean <- aggregate(df_party[, 1:6], list(df_party$party), mean)
+names(df_party_mean)[1] <- "Party" 
+
+# Turning into a table of proportions
+df_party_prop <- df_party_mean[1] %>%
+  cbind(as.data.frame(round(100*prop.table(df_party_mean[2:7]),digits=2)))
+
+# pivoting df for making figure
+df_party_prop_longer <-df_party_prop %>%
+  pivot_longer(c(2:7), names_to = "Topic", values_to = "Proportion")
+
+# visualizing proportions of topics by party
+party_topic_plot1 <- df_party_prop_longer %>%
+  ggplot(aes(Party, Proportion, fill = Topic)) +
+  geom_bar(position = "fill", stat = "identity") +
+  scale_y_continuous() + 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 6))
+party_topic_plot1
+
+##### Visualization: topic prevelance over time 
+longdf_theta <- pivot_longer(df_theta, cols = names(df_theta[1:6]), names_to = "topic",values_to = "theta")
+
+ggplot(longdf_theta,aes(x=date, y=theta)) + 
+  geom_point() +
+  geom_line() +
+  facet_grid(topic ~ .)
+
+## ideas: - use means or proportions of thetas instead of thetas themselves
+##        - aggregate by month instead of using simple date
+##        - possibly color by party?
+
+-----------------------
+#### for 12 topics ####
+-----------------------
+  
 # fit a simple model with 12 topics
 mod_2 <- stm(speech_dfm, K = 12, seed = 12345)
 labelTopics(mod_2)
-plot(mod_2, type = "labels", labeltype = "prob") # or frex, lift, score
+#plot(mod_2, type = "labels", labeltype = "prob") # or frex, lift, score
 
 # check if topics are exclusive 
 dotchart(exclusivity(mod_2), labels = 1:12)

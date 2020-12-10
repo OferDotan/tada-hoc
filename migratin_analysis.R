@@ -2,6 +2,7 @@
 library(readr)
 library(quanteda)
 library(quanteda.textmodels)
+library(quanteda.sentiment)
 library(readtext)
 library(tidyverse)
 library(data.table)
@@ -28,7 +29,7 @@ library(lattice)
 # LOAD DATA #
 #############
 
-Corp_HouseOfCommons_V2  <- readRDS("~/Desktop/Corp_HouseOfCommons_V2.rds")
+Corp_HouseOfCommons_V2  <- readRDS("~/Desktop/tada-hoc/Corp_HouseOfCommons_V2.rds")
 names(Corp_HouseOfCommons_V2)
 
 ##############
@@ -95,14 +96,11 @@ dotchart(cohere, labels = 1:12)
 ########
 
 kw_immigration <- kwic(speechcorp, paste(toMatch,collapse="|"), window = 20)
-install.packages("xtable")
 
 kwic_df <- tibble(speaker = kw_immigration$docname, 
                   text = paste(kw_immigration$pre, kw_immigration$post, sep = " "))
 corp_kwic <- corpus(kwic_df)
 summary(corp_kwic)
-
-# here: think about including a step that excludes all keywords. THis is as we don't want those to show in our wordcloud. 
 
 # turn kwic into dfm
 
@@ -158,9 +156,6 @@ ggplot(count_months, aes(x=month, y=frequency))+
 
 
 
-
-
-
 #############
 # Sentiment #
 #############
@@ -175,21 +170,67 @@ ggplot(count_months, aes(x=month, y=frequency))+
 # sentrement (line graph) 
 # migrants as passive "bystanders" vs. active 
 
-library(SentimentAnalysis)
 
-#sentiment analysis
-sentiments <- analyzeSentiment(speechcorp)
-convertToBinaryResponse(sentiments)$SentimentQDAP #built in sentimet dict 
+sentiment <- textstat_polarity(speechcorp, 
+                               data_dictionary_LSD2015)
 
-# View sentiment direction (i.e. positive, neutral and negative)
-convertToDirection(sentiments$SentimentQDAP)
-# Line plot with sentiment scores
-plotSentiment(sentiments, x = NULL, cumsum = FALSE, xlab = "",
-              ylab = "Sentiment")
+hist(sentiment$sentiment, breaks = 60)
+sentiment$sent_prob <- 1/(1 + exp(-sentiment$sentiment))
 
-#Scatterplot with trend line between sentiment and response
-plotSentimentResponse(sentiments, response, smoothing = "gam",
-                      xlab = "Sentiment", ylab = "Response")
+#compare with kwic corpus
+
+kwic_sentiment <- textstat_polarity(corp_kwic, 
+                               data_dictionary_LSD2015)
+
+hist(kwic_sentiment$sentiment, breaks = 60)
+kwic_sentiment$sent_prob <- 1/(1 + exp(-kwic_sentiment$sentiment))
+
+# add sentiments to initial data frames
+agenda_text_filter = cbind(agenda_text_filter,sentiment)
+kw_immigration = cbind(kw_immigration,kwic_sentiment)
+
+# graph sentiment over time for overall subset
+
+agenda_text_filter$date <- as.Date(agenda_text_filter$date, format="%Y-%m-%d")
+sentiment_df <- data.frame(date = agenda_text_filter$date, sentiment = agenda_text_filter$sentiment)
+sentiment_month = sentiment_df %>% group_by(month=floor_date(date, "month")) %>% summarise(avg_sentiment = mean(sentiment))
+
+
+ggplot(sentiment_month, aes(x=month, y=avg_sentiment))+
+  geom_area( fill="#69b3a2", alpha=0.4, aes(group=1)) +
+  geom_line(color="#69b3a2",aes(group=1)) +
+  ggtitle("Observed Sentiment in immigration related contributions overall")+
+  geom_vline(xintercept = as.Date("2015-05-07"), linetype = "dashed")+ #general election 2015
+  geom_vline(xintercept = as.Date("2016-06-23"), linetype = "dashed", color = "red")+ # Brexit referendum
+  theme(axis.text.x = element_text(angle = 90))
+
+# graph sentiment over time for kwic subset ## currently no date for kwic
+
+#check if doc_id is unique
+length(unique(agenda_text_filter$doc_id)) # yes. 
+
+# add date column to kwic
+doc_id_date <- data.frame(date = agenda_text_filter$date,docname = agenda_text_filter$doc_id) 
+kw_imm_date <- merge(kw_immigration,doc_id_date,by = "docname", all.x = TRUE, sort = FALSE) # will need to merge based on the docname, as this is the same as the initial doc_id.
+
+
+kw_imm_date$date <- as.Date(kw_imm_date$date, format="%Y-%m-%d")
+kw_sentiment_df <- data.frame(date = kw_imm_date$date, sentiment = kw_imm_date$sentiment)
+kw_sentiment_month = kw_sentiment_df %>% group_by(month=floor_date(date, "month")) %>% summarise(avg_sentiment = mean(sentiment))
+
+
+ggplot(kw_sentiment_month, aes(x=month, y=avg_sentiment))+
+  geom_area( fill="#69b3a2", alpha=0.4, aes(group=1)) +
+  geom_line(color="#69b3a2",aes(group=1)) +
+  ggtitle("Observed Sentiment in Context of Keywords in immigration related contributions")+
+  geom_vline(xintercept = as.Date("2015-05-07"), linetype = "dashed")+ #general election 2015
+  geom_vline(xintercept = as.Date("2016-06-23"), linetype = "dashed", color = "red")+ # Brexit referendum
+  theme(axis.text.x = element_text(angle = 90))
+
+
+
+
+
 
 
 

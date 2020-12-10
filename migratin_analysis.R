@@ -239,7 +239,6 @@ ggplot(count_agenda, aes(x=month, y=frequency))+
   theme(axis.text.x = element_text(angle = 90))
 
 # plot: prevalence of immigration debates over time by month | total number of words as a proxy for time spent on debating. 
-
 agenda_text_filter$date <- as.Date(agenda_text_filter$date, format="%Y-%m-%d")
 count_months_words = agenda_text_filter %>% group_by(month=floor_date(date, "month")) %>% summarise(word_sum = sum(terms)) # for now this counts the number of documents in each month. Might need to make changes to this still. Could also count by agenda point = number of debates. 
 

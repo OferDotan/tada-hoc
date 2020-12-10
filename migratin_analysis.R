@@ -333,6 +333,7 @@ ggplot(kw_sentiment_party)+
 ###############
 
 
+
 # some examples of agendas
 head(unique(Corp_HouseOfCommons_V2$agenda))
 #number of agendas
@@ -340,6 +341,14 @@ length(unique(Corp_HouseOfCommons_V2$agenda))
 length(Corp_HouseOfCommons_V2$agenda)
 Corp_HouseOfCommons_V2$agenda["migration"]
 ?contains()
+
+## just to check what the sentiment analysis does: 
+
+text <- data.frame(text =c("nice","evil","and"))
+text <- corpus(text)
+sent_text <- textstat_polarity(text, 
+                               data_dictionary_LSD2015)
+
 
 #### Sentiment only for refugee* by party
 refu <- c("refugee*","Refugee*")

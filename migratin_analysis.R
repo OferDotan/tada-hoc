@@ -142,10 +142,10 @@ ggplot(features_dfm_inaug, aes(x = feature, y = frequency)) +
 ################
 # DESCRIPTIVES #
 ################
-# plot: prevalence of immigration debates over time (vertical line at 07.05.2015 = general election & vertical line at 23.06.2016 = Brexit referendum)
+# plot: prevalence of immigration debates over time
 
 agenda_text_filter$date <- as.Date(agenda_text_filter$date, format="%Y-%m-%d")
-count_months = agenda_text_filter %>% group_by(month=floor_date(date, "month")) %>% summarise(frequency = n())
+count_months = agenda_text_filter %>% group_by(month=floor_date(date, "month")) %>% summarise(frequency = n()) # for now this counts the number of documents in each month. Might need to make changes to this still. Could also count by agenda point = number of debates. 
 
 ggplot(count_months, aes(x=month, y=frequency))+
   geom_area( fill="#69b3a2", alpha=0.4) +

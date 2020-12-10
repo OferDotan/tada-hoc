@@ -12,6 +12,7 @@ library(ggplot2)
 library(lubridate)
 library(lme4)
 library(lattice)
+library(quanteda.textstats)
 
 ########
 # Brainstorm: Research Questions. 
@@ -129,6 +130,14 @@ kwic_dfm_no_key <- dfm(corp_kwic,
 # wordcloud no key words
 textplot_wordcloud(kwic_dfm_no_key, max_words = 90, color = rev(RColorBrewer::brewer.pal(10, "RdBu")))
 
+# plot frequency of words related to migration (including key terms)
+features_dfm_inaug <- textstat_frequency(speech_dfm, n=100)
+# Sort by reverse frequency order
+features_dfm_inaug$feature <- with(features_dfm_inaug, reorder(feature, -frequency))
+
+ggplot(features_dfm_inaug, aes(x = feature, y = frequency)) +
+  geom_point() + 
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
 
 ################
 # DESCRIPTIVES #

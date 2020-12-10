@@ -1,18 +1,21 @@
 #load packages
-# library(readr)
+library(readr)
 library(quanteda)
 library(quanteda.textmodels)
 library(quanteda.sentiment)
 library(quanteda.textstats)
 library(readtext)
 library(tidyverse)
-# library(data.table)
+library(data.table)
 library(stm)
+library(dplyr)
+library(ggplot2)
 library(lubridate)
 library(lme4)
 library(lattice)
 library(wordcloud)
 library(ggridges)
+
 ########
 # Brainstorm: Research Questions. 
 
@@ -28,10 +31,12 @@ library(ggridges)
 #############
 # LOAD DATA #
 #############
+setwd("C:/Users/amirf/Desktop/tada-hoc")
 
-Corp_HouseOfCommons_V2  <- readRDS("~/Desktop/tada-hoc/Corp_HouseOfCommons_V2.rds")
+Corp_HouseOfCommons_V2  <- readRDS("Corp_HouseOfCommons_V2.rds")
+
 names(Corp_HouseOfCommons_V2)
-
+head(Corp_HouseOfCommons_V2$date)
 ##############
 # SUBSETTING #
 ##############
@@ -40,10 +45,8 @@ names(Corp_HouseOfCommons_V2)
 
 #year: subset to speeches from 2010 (Justification:Tory manifesto)
 speeches <- Corp_HouseOfCommons_V2 %>% 
-  select(!c(iso3country, party.facts.id, parliament)) %>%
+  select(-c(iso3country, party.facts.id, parliament)) %>%
   filter(date>"2009-12-20")
-
-# think about removing single word answers (or above 5)
 
 #content/terms: subset to speeches that either contain or termed (agenda) as "immigra*", "refugee*" or "asylum" (according to v.D)
 
@@ -62,6 +65,7 @@ speech_dfm <- dfm(speechcorp,
                   remove_separators = TRUE,
                   split_hyphens = TRUE,
                   remove_numbers = TRUE)
+
 
 
 ################
@@ -89,7 +93,7 @@ dotchart(cohere, labels = 1:6)
 speech_dfm_subs <- dfm_subset(speech_dfm, rowSums(speech_dfm)>0)
 
 # combine stm thetas with dfm docvars
-df_theta <- as.data.frame(mod$theta)%>%
+df_theta <- as.data.frame(mod_1$theta)%>%
   cbind(docvars(speech_dfm_subs))
 
 ### naming topics
@@ -129,10 +133,26 @@ party_topic_plot1 <- df_party_prop_longer %>%
   theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 6))
 party_topic_plot1
 
-##### Visualization: topic prevalence over time 
+##### Visualization: topic prevelance over time 
 longdf_theta <- pivot_longer(df_theta, cols = names(df_theta[1:6]), names_to = "topic",values_to = "theta")
 
+
 ggplot(longdf_theta,aes(x=date, y=theta)) + 
+  geom_point() +
+  geom_line() +
+  facet_grid(topic ~ .)
+
+# date to month.year (mutate), group by month.year, summarize mean of theata, calculate proportion of theta means by topic
+longdf_theta_month <- longdf_theta %>%
+  group_by(month=floor_date(date, "month")) %>% # date to month probably doesnt work here...
+  summarise(theta.means = mean(theta))
+
+#########
+# mutate(year.month = str_c(str_split(date, "-")[1:2]))
+#########
+
+# plot proportions over month.years
+ggplot(longdf_prop,aes(x=date, y=theta.means)) + 
   geom_point() +
   geom_line() +
   facet_grid(topic ~ .)
@@ -164,10 +184,9 @@ dotchart(cohere, labels = 1:12)
 kw_immigration <- kwic(speechcorp, paste(toMatch,collapse="|"), window = 20)
 
 kwic_df <- tibble(speaker = kw_immigration$docname, 
-                  text = paste(kw_immigration$pre, kw_immigration$post, sep = " ")) 
+                  text = paste(kw_immigration$pre, kw_immigration$post, sep = " "))
 corp_kwic <- corpus(kwic_df)
 summary(corp_kwic)
-
 
 # turn kwic into dfm
 
@@ -179,18 +198,15 @@ kwic_dfm <- dfm(corp_kwic,
                 split_hyphens = TRUE,
                 remove_numbers = TRUE)
 
-
-# test <- convert(kwic_dfm_no_key, to = "data.frame", omit_empty = TRUE, docid_field = "doc_id", docvars = NULL) STILL NEEDED: Remove stopwords and keywords and transform back into dataframe (kwic_df)
-
-
-# wordcloud incl. keywords
+# wordcloud
 textplot_wordcloud(kwic_dfm, max_words = 90, color = rev(RColorBrewer::brewer.pal(10, "RdBu")))
 
 
 ## removing also key words to see what is left
+key_words <- c("immigra*","Immigra*","refugee*","Refugee*","asylum","Asylum"," migra*"," Migra*")
 kwic_dfm_no_key <- dfm(corp_kwic,
                        remove_punct = TRUE,
-                       remove = c(as.vector(toMatch),stopwords()),
+                       remove = c(as.vector(key_words),stopwords()),
                        remove_symbols = TRUE,
                        remove_separators = TRUE,
                        split_hyphens = TRUE,
@@ -211,47 +227,18 @@ ggplot(features_dfm_inaug, aes(x = feature, y = frequency)) +
 ################
 # DESCRIPTIVES #
 ################
-# plot: prevalence of immigration debates over time by month | counting documents
+# plot: prevalence of immigration debates over time
+
 agenda_text_filter$date <- as.Date(agenda_text_filter$date, format="%Y-%m-%d")
 count_months = agenda_text_filter %>% group_by(month=floor_date(date, "month")) %>% summarise(frequency = n()) # for now this counts the number of documents in each month. Might need to make changes to this still. Could also count by agenda point = number of debates. 
 
 ggplot(count_months, aes(x=month, y=frequency))+
   geom_area( fill="#69b3a2", alpha=0.4) +
   geom_line(color="#69b3a2") +
-  labs(title = "Prevalence of immigration debates",
-       subtitle = "by number of documents")+
+  ggtitle("Prevalence of Immigration debates")+
   geom_vline(xintercept = as.Date("2015-05-07"), linetype = "dashed")+ #general election 2015
   geom_vline(xintercept = as.Date("2016-06-23"), linetype = "dashed", color = "red")+ # Brexit referendum
   theme(axis.text.x = element_text(angle = 90))
-
-# plot: prevalence of immigration debates over time by month | counting unique agenda points
-agenda_text_filter$date <- as.Date(agenda_text_filter$date, format="%Y-%m-%d")
-count_months_agenda = agenda_text_filter %>% group_by(month=floor_date(date, "month"), agenda = agenda) %>% summarise(frequency = n()) # for now this counts the number of documents in each month. Might need to make changes to this still. Could also count by agenda point = number of debates. 
-count_agenda = count_months_agenda %>% group_by(month=floor_date(month, "month")) %>% summarise(frequency = n()) # for now this counts the number of documents in each month. Might need to make changes to this still. Could also count by agenda point = number of debates. 
-
-ggplot(count_agenda, aes(x=month, y=frequency))+
-  geom_area( fill="#69b3a2", alpha=0.4) +
-  geom_line(color="#69b3a2") +
-  labs(title = "Prevalence of immigration debates",
-       subtitle = "by number of agenda points (unique debates)")+
-  geom_vline(xintercept = as.Date("2015-05-07"), linetype = "dashed")+ #general election 2015
-  geom_vline(xintercept = as.Date("2016-06-23"), linetype = "dashed", color = "red")+ # Brexit referendum
-  theme(axis.text.x = element_text(angle = 90))
-
-# plot: prevalence of immigration debates over time by month | total number of words as a proxy for time spent on debating. 
-
-agenda_text_filter$date <- as.Date(agenda_text_filter$date, format="%Y-%m-%d")
-count_months_words = agenda_text_filter %>% group_by(month=floor_date(date, "month")) %>% summarise(word_sum = sum(terms)) # for now this counts the number of documents in each month. Might need to make changes to this still. Could also count by agenda point = number of debates. 
-
-ggplot(count_months_words, aes(x=month, y=word_sum))+
-  geom_area( fill="#69b3a2", alpha=0.4) +
-  geom_line(color="#69b3a2") +
-  labs(title = "Prevalence of immigration debates",
-       subtitle = "by amounts of words (proxy for time spent on debates)")+
-  geom_vline(xintercept = as.Date("2015-05-07"), linetype = "dashed")+ #general election 2015
-  geom_vline(xintercept = as.Date("2016-06-23"), linetype = "dashed", color = "red")+ # Brexit referendum
-  theme(axis.text.x = element_text(angle = 90))
-
 
 
 
@@ -356,6 +343,8 @@ ggplot(kw_sentiment_party)+
   geom_vline(xintercept = as.Date("2015-05-07"), linetype = "dashed")+ #general election 2015
   geom_vline(xintercept = as.Date("2016-06-23"), linetype = "dashed", color = "red")+ # Brexit referendum
   theme(axis.text.x = element_text(angle = 90))
+
+
 
 ###############
 # Exploratory #

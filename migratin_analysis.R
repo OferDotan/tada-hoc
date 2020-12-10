@@ -274,6 +274,34 @@ length(Corp_HouseOfCommons_V2$agenda)
 Corp_HouseOfCommons_V2$agenda["migration"]
 ?contains()
 
+#### Sentiment only for refugee* by party
+refu <- c("refugee*","Refugee*")
+refugee <- filter(speeches, grepl(paste(refu,collapse="|"), agenda) | grepl(paste(refu,collapse="|"), text))
+refcorp <- corpus(refugee)
+
+ref_sent <- textstat_polarity(refcorp, 
+                              data_dictionary_LSD2015)
+ref_sent$sent_prob <- 1/(1 + exp(-ref_sent$sentiment))
+
+refugee = cbind(refugee,ref_sent)
+
+refugee$date <- as.Date(refugee$date, format="%Y-%m-%d")
+ref_party_df <- data.frame(date = refugee$date, party = refugee$party ,sentiment = refugee$sentiment)
+ref_party = ref_party_df %>% group_by(month=floor_date(date, "month"), party = party) %>% summarise(avg_sentiment = mean(sentiment))
+
+ggplot(ref_party)+
+  geom_line(aes(x=month, y=avg_sentiment,group = party), colour = "grey",size = 1) +
+  geom_line(data = subset(ref_party, party == "Con") ,aes(x=month, y=avg_sentiment,group = party), colour = "red",size = 1) +
+  geom_line(data = subset(ref_party, party == "Lab") ,aes(x=month, y=avg_sentiment,group = party), colour = "blue",size = 1) +
+  labs(title = "Observed Sentiment in refugee*- related contributions overall by party",
+       subtitle = "Conservative = red, Labour = blue",
+       caption = "dashed line (black = 2015 general election, red = Brexit referendum")+
+  geom_vline(xintercept = as.Date("2015-05-07"), linetype = "dashed")+ #general election 2015
+  geom_vline(xintercept = as.Date("2016-06-23"), linetype = "dashed", color = "red")+ # Brexit referendum
+  theme(axis.text.x = element_text(angle = 90))
+
+
+
 
 
 

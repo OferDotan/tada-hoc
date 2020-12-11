@@ -288,6 +288,10 @@ ggplot(features_dfm_inaug, aes(x = feature, y = frequency)) +
 ################
 # DESCRIPTIVES #
 ################
+events <- data.frame(Ref = c("2015 General Election", "Brexit Referendum"),
+                     vals = c("2015-05-07", "2016-06-23"),
+                     stringsAsFactors = FALSE)
+
 # plot: prevalence of immigration debates over time by month | counting documents
 agenda_text_filter$date <- as.Date(agenda_text_filter$date, format="%Y-%m-%d")
 count_months = agenda_text_filter %>% group_by(month=floor_date(date, "month")) %>% summarise(frequency = n()) # for now this counts the number of documents in each month. Might need to make changes to this still. Could also count by agenda point = number of debates. 
@@ -329,13 +333,30 @@ ggplot(count_months_words, aes(x=month, y=word_sum))+
   theme(axis.text.x = element_text(angle = 90))
 
 
+### to make those graphs more interactive interactive
+library(dygraphs)
+library(xts)
 
+# create xts necessary to use dygraph (from here it would replace the ggplot part)
+don <- xts(x = count_months_words$word_sum, order.by = count_months_words$month)
+names(don) <- "# words"
 
+# Plot
+p <- dygraph(don, main = "Prevalence of immigration debates", ylab =  "# of words spent on immigration-realted debates", xlab = "Year (by month)") %>%
+  dyOptions(labelsUTC = TRUE, fillGraph=TRUE, fillAlpha=0.4, drawGrid = FALSE, colors="#69b3a2") %>%
+  dyRangeSelector() %>%
+  dyCrosshair(direction = "vertical") %>%
+  dyHighlight(highlightCircleSize = 5, highlightSeriesBackgroundAlpha = 0.2, hideOnMouseOut = FALSE)  %>%
+  dyRoller(rollPeriod = 1)%>%
+  dyEvent(x="2015-05-07", label = "General Election 2015")%>%
+  dyEvent(x="2016-06-23", label = "Brexit Referendum", color = "red")
+
+# to save the widget
+# library(htmlwidgets)
+# saveWidget(p, file="C:/Users/jan/Dropbox/Uni/Hertie/Text as Data/Final Paper/dataverse_files/dygraphs318.html")
 
 # density ridge plot: topic evolution over time (time = X, topic = Y) 
 ## Hypo: we see more debates before events like election/referendum
-
-
 
 #############################
 ## SENTIMENT | Data Frames ##
@@ -375,8 +396,9 @@ ggplot(sentiment_month, aes(x=month, y=avg_sentiment))+
   geom_line(color="#69b3a2",aes(group=1)) +
   labs(title = "Observed Sentiment in immigration related contributions overall",
        caption = "dashed line (black = 2015 general election, red = Brexit referendum")+
-  geom_vline(xintercept = as.Date("2015-05-07"), linetype = "dashed")+ #general election 2015
-  geom_vline(xintercept = as.Date("2016-06-23"), linetype = "dashed", color = "red")+ # Brexit referendum
+  geom_vline(xintercept = as.numeric(as.Date(events$vals)),
+             colour = c("black","red"),
+             show.legend = FALSE, linetype ="dashed")+
   theme(axis.text.x = element_text(angle = 90))
 
 ## OVERALL sentiment by party
@@ -385,17 +407,23 @@ agenda_text_filter$date <- as.Date(agenda_text_filter$date, format="%Y-%m-%d")
 sentiment_party_df <- data.frame(date = agenda_text_filter$date, party = agenda_text_filter$party ,sentiment = agenda_text_filter$sentiment)
 sentiment_party = sentiment_party_df %>% group_by(month=floor_date(date, "month"), party = party) %>% summarise(avg_sentiment = mean(sentiment))
 
-ggplot(sentiment_party)+
+p <- ggplot(sentiment_party)+
   geom_line(aes(x=month, y=avg_sentiment,group = party), colour = "grey",size = 1) +
   geom_line(data = subset(sentiment_party, party == "Con") ,aes(x=month, y=avg_sentiment,group = party), colour = "red",size = 1) +
   geom_line(data = subset(sentiment_party, party == "Lab") ,aes(x=month, y=avg_sentiment,group = party), colour = "blue",size = 1) +
   labs(title = "Observed Sentiment in immigration related contributions overall by party",
        subtitle = "Conservative = red, Labour = blue",
        caption = "dashed line (black = 2015 general election, red = Brexit referendum")+
-  geom_vline(xintercept = as.Date("2015-05-07"), linetype = "dashed")+ #general election 2015
-  geom_vline(xintercept = as.Date("2016-06-23"), linetype = "dashed", color = "red")+ # Brexit referendum
+  geom_vline(xintercept = as.numeric(as.Date(events$vals)),
+             colour = c("black","red"),
+             show.legend = FALSE, linetype ="dashed")+
   theme(axis.text.x = element_text(angle = 90))
 
+# turn into interactive graph
+install.packages("plotly")
+library(plotly)
+p <- ggplotly(p)
+p
 
 ## KWIC sentiment
 

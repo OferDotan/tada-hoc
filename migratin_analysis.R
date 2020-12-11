@@ -13,7 +13,10 @@ library(lme4)
 library(lattice)
 library(wordcloud)
 library(ggridges)
+library(plotly)
 library(tm)
+library(dygraphs)
+library(xts)
 
 ########
 # Brainstorm: Research Questions. 
@@ -334,8 +337,6 @@ ggplot(count_months_words, aes(x=month, y=word_sum))+
 
 
 ### to make those graphs more interactive interactive
-library(dygraphs)
-library(xts)
 
 # create xts necessary to use dygraph (from here it would replace the ggplot part)
 don <- xts(x = count_months_words$word_sum, order.by = count_months_words$month)
@@ -420,8 +421,6 @@ p <- ggplot(sentiment_party)+
   theme(axis.text.x = element_text(angle = 90))
 
 # turn into interactive graph
-install.packages("plotly")
-library(plotly)
 p <- ggplotly(p)
 p
 

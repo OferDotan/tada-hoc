@@ -118,7 +118,7 @@ events <- data.frame(Ref = c("2015 General Election", "Brexit Referendum"),
 
 ## 3. Descriptives
 
-Justifications and thoughts here.
+Justifications and throughts here.
 
 - This section looks at the overall prevalence of immigration-realted debates in the HoC between 2010 and 2020, irrespective of party.
 - We use a density plot that depicts frequency (y) across time. 
@@ -215,6 +215,25 @@ dygraph(descr_plot_3,
   dyEvent(x="2016-06-23", label = "Brexit Referendum", color = "red")
 ```
 
+```{r plot 4: prevalence by party, echo=FALSE}
+
+# library
+HoC_data$date <- as.Date(HoC_data$date, format="%Y-%m-%d")
+
+sum_by_party = HoC_data %>% 
+  group_by(month=floor_date(date, "month"), party = party) %>% 
+  summarise(frequency = sum(terms)) 
+
+# Plot
+ggplot(sum_by_party, aes(x = month, y = party, fill = party)) +
+  geom_density_ridges(alpha=0.6) +
+  labs(title = "Number of words spent on immigration-realted debates",
+       subtitle = "by party")+
+  geom_vline(xintercept = as.Date("2015-05-07"), linetype = "dashed")+ #general election 2015
+  geom_vline(xintercept = as.Date("2016-06-23"), linetype = "dashed", color = "red") # Brexit referendum
+
+
+```
 
 ## 4. Keywords in Context
 
@@ -570,7 +589,7 @@ k
 # make interactive
 k <- ggplotly(k)
 k
-# Jan: still needs vlines for election and brexit 
+
 ```
 
 ```{r topics_4, echo=FALSE}
@@ -619,61 +638,6 @@ ggplot(subset(sentiment_long_party, party == c("Con","Lab", "GPEW", "Independent
   facet_wrap(~party)
 
 
-```
-
-```{r topics-sentiment regression, echo=FALSE}
-head(sentiment_long_party)
-
-#subset data to just one topic (1)
-sentiment_long_party_topic1 <- sentiment_long_party %>%
-  filter(topic == names(HoC_theta_data)[1])
-
-#subset data to just one topic (2)
-sentiment_long_party_topic2 <- sentiment_long_party %>%
-  filter(topic == names(HoC_theta_data)[2])
-
-#subset data to just one topic (3)
-sentiment_long_party_topic3 <- sentiment_long_party %>%
-  filter(topic == names(HoC_theta_data)[3])
-
-#subset data to just one topic (4)
-sentiment_long_party_topic4 <- sentiment_long_party %>%
-  filter(topic == names(HoC_theta_data)[4])
-
-#subset data to just one topic (5)
-sentiment_long_party_topic5 <- sentiment_long_party %>%
-  filter(topic == names(HoC_theta_data)[5])
-
-#subset data to just one topic (6)
-sentiment_long_party_topic6 <- sentiment_long_party %>%
-  filter(topic == names(HoC_theta_data)[6])
-
-# regression models for each topic (effect of topic on sentiment, controlling for party and year)
-names(HoC_theta_data)[1]
-reg1 <- lm(sentiment.means~theta.means+party+year, data=sentiment_long_party_topic1)
-summary(reg1)
-
-names(HoC_theta_data)[2]
-reg2 <- lm(sentiment.means~theta.means+party+year, data=sentiment_long_party_topic2)
-summary(reg2)
-
-names(HoC_theta_data)[3]
-reg3 <- lm(sentiment.means~theta.means+party+year, data=sentiment_long_party_topic3)
-summary(reg3)
-
-names(HoC_theta_data)[4]
-reg4 <- lm(sentiment.means~theta.means+party+year, data=sentiment_long_party_topic4)
-summary(reg4)
-
-names(HoC_theta_data)[5]
-reg5 <- lm(sentiment.means~theta.means+party+year, data=sentiment_long_party_topic5)
-summary(reg5)
-
-names(HoC_theta_data)[6]
-reg6 <- lm(sentiment.means~theta.means+party+year, data=sentiment_long_party_topic6)
-summary(reg6)
-
-# think on how best to plot these...
 ```
 
 

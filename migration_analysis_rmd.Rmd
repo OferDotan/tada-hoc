@@ -118,7 +118,7 @@ events <- data.frame(Ref = c("2015 General Election", "Brexit Referendum"),
 
 ## 3. Descriptives
 
-Justifications and throughts here.
+Justifications and thoughts here.
 
 - This section looks at the overall prevalence of immigration-realted debates in the HoC between 2010 and 2020, irrespective of party.
 - We use a density plot that depicts frequency (y) across time. 

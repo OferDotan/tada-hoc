@@ -55,6 +55,8 @@ HoC_corp_time <- Corp_HouseOfCommons_V2 %>%
   select(!c(iso3country, party.facts.id, parliament)) %>%
   filter(date>"2009-12-20")
 
+# select relevant parties?? # 12/12/2020 note to ourselves: Do we want to subset parties? at least exclude the NAs?
+
 
 # select relevant content 
 

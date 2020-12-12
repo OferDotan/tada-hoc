@@ -96,7 +96,7 @@ HoC_stm <-asSTMCorpus(HoC_dfm)
 ```
 
 *2.2.2 KWIC - Dataframe, Corpus and Dfm*
-```{r dataframes, echo=FALSE}
+```{r dataframes_1, echo=FALSE}
 
 # kwic dataframe, corpus and dfm
 
@@ -120,7 +120,7 @@ HoC_kwic_dfm <- dfm(HoC_kwic_corp,
 ```
 
 *2.2.3 General consideration/definitions used across analysis*
-```{r dataframes, echo=FALSE}
+```{r dataframes_3, echo=FALSE}
 
 events <- data.frame(Ref = c("2015 General Election", "Brexit Referendum"),
                      vals = c("2015-05-07", "2016-06-23"),
@@ -238,7 +238,7 @@ textplot_wordcloud(HoC_kwic_dfm, max_words = 90, color = rev(RColorBrewer::brewe
 ```
 
 *KWIC - Wordcloud excl. keywords*
-```{r kwic, echo=FALSE}
+```{r kwic_2, echo=FALSE}
 
 ## removing also key words to see what is left
 HoC_kwic_dfm_no_key <- dfm(HoC_kwic_corp,
@@ -253,7 +253,7 @@ textplot_wordcloud(HoC_kwic_dfm_no_key, max_words = 90, color = rev(RColorBrewer
 ```
 
 *Frequency of words related to migration (including key terms)*
-```{r kwic, echo=FALSE}
+```{r kwic_3, echo=FALSE}
 
 HoC_dfm_word_freq <- textstat_frequency(HoC_dfm, n=100)
 # Sort by reverse frequency order
@@ -337,7 +337,7 @@ party_senti_plot
 ```
 
 *Sentiment | Keywords in Ceontext*
-```{r sentiment, echo=FALSE}
+```{r sentiment_2, echo=FALSE}
 
 kwic_sentiment <- textstat_polarity(HoC_kwic_corp, 
                                     data_dictionary_LSD2015)
@@ -485,7 +485,7 @@ topic_by_party_plot
 
 
 
-```{r topics, echo=FALSE}
+```{r topics_2, echo=FALSE}
 ### Visualization 1: topic proportions by party 
 
 # combine stm thetas with dfm docvars
@@ -540,7 +540,7 @@ topic_by_party_plot
 ```
 
 
-```{r topics, echo=FALSE}
+```{r topics_3, echo=FALSE}
 ##### Visualization 2: topic prevalence over time 
 
 theta_data_long <- pivot_longer(
@@ -578,14 +578,49 @@ ggplot(theta_long_data_year_1,aes(x=year, y=theta.means, group = 1, color = topi
 
 ```
 
-```{r}
+```{r topics_4, echo=FALSE}
+
+# graph sentiment by topics
+sentiment_data_long <- theta_data_long %>%
+  mutate(year = str_sub(date, 1, 4)) %>%
+  group_by(year, topic, party) %>% 
+  summarise(sentiment.means = mean(sentiment))
+
+sentiment_long_party <- cbind(sentiment_data_long, theta.means = theta_long_data_year_1$theta.means)
+
+sentiment_long_party$year <- as.Date(sentiment_long_party$year, format = "%Y")
+
+ggplot(sentiment_long_party)+
+  geom_line(aes(x = year, y=sentiment.means, group=party), colour = "grey") +
+  geom_line(data = subset(sentiment_long_party, party == "Con"), aes(x = year, y=sentiment.means, group=party), colour = "blue") +
+  geom_line(data = subset(sentiment_long_party, party == "Lab"), aes(x = year, y=sentiment.means, group=party), colour = "red") +
+  labs(title = "Observed Sentiment by partyand topic",
+       caption = "dashed line (black = 2015 general election, red = Brexit referendum")+
+  geom_vline(xintercept = as.Date("2015-05-07"), linetype = "dashed")+ #general election 2015
+  geom_vline(xintercept = as.Date("2016-06-23"), linetype = "dashed", color = "red")+ # Brexit referendum
+  facet_wrap(~topic)
+
+
+# Topic prevalence and observed Sentiment by party for Conservatives and Labour. 
+ggplot(subset(sentiment_long_party, party == c("Con","Lab")))+
+  geom_line(aes(x = year, y=theta.means, color = topic)) +
+  geom_line(data = subset(sentiment_long_party, party == c("Con","Lab")), aes(x = year, y=sentiment.means), linetype="dashed", colour = "darkgrey") +
+  labs(title = "Topic prevalence and observed Sentiment by party",
+       caption = "dashed line (black = 2015 general election, red = Brexit referendum")+
+  geom_vline(xintercept = as.Date("2015-05-07"), linetype = "dashed")+ #general election 2015
+  geom_vline(xintercept = as.Date("2016-06-23"), linetype = "dashed", color = "red")+ # Brexit referendum
+  facet_wrap(~party)
+```
+
+
+```{r topics_5, echo=FALSE}
 
 # save and load topic model dataframe
 save(HoC_theta_data, file = "HoC_theta_data.RData")
 load("HoC_theta_data.RData")
 ```
 
-```{r topics, echo=FALSE}
+```{r topics_6, echo=FALSE}
 # fit a simple model with 12 topics
 topic_mod_2 <- stm(HoC_dfm, K = 12, seed = 12345)
 labelTopics(topic_mod_2)
@@ -600,7 +635,7 @@ dotchart(cohere, labels = 1:12)
 ```
 
 
-```{r topics, echo=FALSE}
+```{r topics_7, echo=FALSE}
 # topic model prevelance by party
 # new topic model mod3  --> @Amir check why error showss up regarding content covariate lenght? 
 

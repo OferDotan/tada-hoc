@@ -181,12 +181,12 @@ names(docvars(speech_dfm))
 speech_dfm
 # docs with text as column
 agenda_text_filter
-agenda_text_filter_subs <- filter(agenda_text_filter, length(agenda_text_filter$text)>0)
+agenda_text_filter_subs <- filter(agenda_text_filter, agenda_text_filter$text!="")
 names(agenda_text_filter)
 select
+length(agenda_text_filter)
 
-
-
+length(agenda_text_filter$text)
 
 names(df_theta)
 head(df_theta)

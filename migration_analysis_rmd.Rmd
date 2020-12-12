@@ -422,9 +422,14 @@ HoC_stm <-asSTMCorpus(HoC_dfm)
 
 
 ```{r topics, echo=FALSE}
+########################
+# Running topic model 1#
+########################
+
 # fit a simple model with 6 topics
 topic_mod_1 <- stm(HoC_dfm, K = 6, seed = 12345)
 topic_labels <- labelTopics(topic_mod_1)
+
 #plot(topic_mod_1, type = "labels", labeltype = "prob") # or frex, lift, score
 
 # wordcloud
@@ -437,13 +442,15 @@ dotchart(exclusivity(topic_mod_1), labels = 1:6, color = 1:6)
 cohere <- semanticCoherence(topic_mod_1, HoC_dfm)
 dotchart(cohere, labels = 1:6, color = 1:6) 
 
-### Visualization: topic proportions by party 
+###################################
+# Creating topic model data frame #
+###################################
 
 # combine stm thetas with dfm docvars
 HoC_theta_data <- as.data.frame(topic_mod_1$theta) %>%
   cbind(docvars(HoC_dfm))
 
-### naming topics
+## naming topics
 #combine first 3 labels as a string for a new label
 labels_topic_mod_1 <- c()
 for (topicnumber in topic_labels$topicnums){
@@ -457,6 +464,22 @@ for (topicnumber in topic_labels$topicnums){
 names(HoC_theta_data)[1:6] <- labels_topic_mod_1
 ###
 
+####################################
+# save/load topic model data frame #
+####################################
+
+# save and load topic model dataframe
+save(HoC_theta_data, file = "HoC_theta_data.RData")
+load("HoC_theta_data.RData")
+```
+
+
+Topic Visualizations:
+
+```{r topic_by_party_plot, echo=FALSE}
+
+## topic_by_party_plot: topic proportions by party 
+
 # grouping by party and generating means 
 theta_data_party <- HoC_theta_data %>%
   group_by(party)
@@ -464,7 +487,6 @@ theta_data_party <- HoC_theta_data %>%
 theta_data_party_mean <- aggregate(theta_data_party[, 1:6], 
                                    list(theta_data_party$party), 
                                    mean)
-
 names(theta_data_party_mean)[1] <- "Party" 
 
 # Turning into a table of proportions
@@ -491,68 +513,13 @@ topic_by_party_plot
 ```
 
 
+```{r topics_by_time_plot, echo=FALSE}
 
-```{r topics_2, echo=FALSE}
-### Visualization 1: topic proportions by party 
-
-# combine stm thetas with dfm docvars
-HoC_theta_data <- as.data.frame(topic_mod_1$theta) %>%
-  cbind(docvars(HoC_dfm))
-
-----------------
-# naming topics
-# combine first 3 labels as a string for a new label
-labels_topic_mod_1 <- c()
-for (topicnumber in topic_labels$topicnums){
-  first_3<-(str_c(topic_labels$frex[topicnumber,1], 
-                  ", " , topic_labels$frex[topicnumber,2], 
-                  ", " , topic_labels$frex[topicnumber,3]))
-  labels_topic_mod_1<- append(labels_topic_mod_1, first_3)
-}
-
-# renaming columns
-names(HoC_theta_data)[1:6] <- labels_topic_mod_1
-
-----------------
-
-# group by party and generate means 
-theta_data_party <- HoC_theta_data %>%
-  group_by(party)
-
-theta_data_party_mean <- aggregate(theta_data_party[, 1:6], 
-                                   list(theta_data_party$party), 
-                                   mean)
-names(theta_data_party_mean)[1] <- "Party" 
-
-# turn into a table of proportions
-theta_data_party_prop <- theta_data_party_mean[1] %>%
-  cbind(as.data.frame(
-    round(100*prop.table(theta_data_party_mean[2:7]),
-          digits=2)))
-
-# pivot df for making figure
-party_prop_long <- theta_data_party_prop %>%
-  pivot_longer(c(2:7), 
-               names_to = "Topic", 
-               values_to = "Proportion")
-
-# visualize proportions of topics by party
-topic_by_party_plot <- party_prop_long %>%
-  ggplot(aes(Party, Proportion, fill = Topic)) +
-  geom_bar(position = "fill", stat = "identity") +
-  scale_y_continuous() + 
-  theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 6))
-
-topic_by_party_plot
-```
-
-
-```{r topics_3, echo=FALSE}
-##### Visualization 2: topic prevalence over time 
+## topic_by_party_plot: topic proportions by party 
 
 theta_data_long <- pivot_longer(
-  df_theta, 
-  cols = names(df_theta[1:6]), 
+  HoC_theta_data, 
+  cols = names(HoC_theta_data[1:6]), 
   names_to = "topic",
   values_to = "theta")
 
@@ -562,27 +529,45 @@ theta_long_data_year <- theta_data_long %>%
   group_by(year, topic) %>% 
   summarise(theta.means = mean(theta))
 
-ggplot(theta_long_data_year,aes(x=year, y=theta.means, group = 1, color = topic)) + 
+topics_by_time_plot <- ggplot(theta_long_data_year,aes(x=year, y=theta.means, group = 1, color = topic)) + 
   geom_point() +
   geom_line() +
   geom_vline(xintercept = "2015", linetype = "dashed")+ #general election 2015
   geom_vline(xintercept = "2016", linetype = "dashed", color = "red")+ # Brexit referendum
   facet_wrap(~topic)
 
-####### showing by party by topic... (work in progress...)
+topics_by_time_plot
+```
+
+```{r ind_topics_by_time_by_party_plot, echo=FALSE}
+
+####### showing development of 1 topic over time across parties
 # plot topic theta means by party over years
 theta_long_data_year_1 <- theta_data_long %>%
   mutate(year = str_sub(date, 1, 4)) %>%
   group_by(year, topic, party) %>% 
-  summarise(theta.means = mean(theta))
+  summarise(theta.means = mean(theta)) %>%
+  filter(party == "Con" | party == "Lab" | party == "GPEW" | party == "Independent" | party == "LibDem" | party == "PlaidCymru" | party == "SDLP" | party == "SNP")
 
-ggplot(theta_long_data_year_1,aes(x=year, y=theta.means, group = 1, color = topic)) + 
-  geom_point() +
-  geom_line() +
+# plot all parties together (plot by party, color by topic)
+ggplot()  +
+  geom_line(data = theta_long_data_year_1, aes(x=year, y = theta.means, group = topic, colour = topic)) + 
   geom_vline(xintercept = "2015", linetype = "dashed")+ #general election 2015
   geom_vline(xintercept = "2016", linetype = "dashed", color = "red")+ # Brexit referendum
   facet_wrap(~party)
 
+# plot all parties together (plot by topic, color by party)
+k <- ggplot()  +
+  geom_line(data = theta_long_data_year_1, aes(x=year, y = theta.means, group = party, colour = party)) + 
+  geom_line(data = theta_long_data_year,aes(x=year, y=theta.means, group = 1)) +
+  geom_vline(xintercept = "2015", linetype = "dashed")+ #general election 2015
+  geom_vline(xintercept = "2016", linetype = "dashed", color = "red")+ # Brexit referendum
+  facet_wrap(~topic)
+k
+
+# make interactive
+k <- ggplotly(k)
+k
 ```
 
 ```{r topics_4, echo=FALSE}
@@ -617,17 +602,24 @@ ggplot(subset(sentiment_long_party, party == c("Con","Lab")))+
   geom_vline(xintercept = as.Date("2015-05-07"), linetype = "dashed")+ #general election 2015
   geom_vline(xintercept = as.Date("2016-06-23"), linetype = "dashed", color = "red")+ # Brexit referendum
   facet_wrap(~party)
+
+
+
+# Topic prevalence and observed Sentiment by party for Conservatives and Labour. 
+ggplot(subset(sentiment_long_party, party == c("Con","Lab", "GPEW", "Independent", "LibDem", "PlaidCymru", "SDLP", "SNP")))+
+  geom_line(aes(x = year, y=theta.means, color = topic)) +
+  geom_line(data = subset(sentiment_long_party, party == c("Con","Lab", "GPEW", "Independent", "LibDem", "PlaidCymru", "SDLP", "SNP")), aes(x = year, y=sentiment.means), linetype="dashed", colour = "darkgrey") +
+  labs(title = "Topic prevalence and observed Sentiment by party",
+       caption = "dashed line (black = 2015 general election, red = Brexit referendum")+
+  geom_vline(xintercept = as.Date("2015-05-07"), linetype = "dashed")+ #general election 2015
+  geom_vline(xintercept = as.Date("2016-06-23"), linetype = "dashed", color = "red")+ # Brexit referendum
+  facet_wrap(~party)
+
+
 ```
 
 
 ```{r topics_5, echo=FALSE}
-
-# save and load topic model dataframe
-save(HoC_theta_data, file = "HoC_theta_data.RData")
-load("HoC_theta_data.RData")
-```
-
-```{r topics_6, echo=FALSE}
 # fit a simple model with 12 topics
 topic_mod_2 <- stm(HoC_dfm, K = 12, seed = 12345)
 labelTopics(topic_mod_2)
@@ -642,7 +634,7 @@ dotchart(cohere, labels = 1:12)
 ```
 
 
-```{r topics_7, echo=FALSE}
+```{r topics_6, echo=FALSE}
 # topic model prevelance by party
 # new topic model mod3  --> @Amir check why error showss up regarding content covariate lenght? 
 

@@ -50,7 +50,6 @@ explain the subset + limitations
 *limitations:* 1. loosing short responses (responses in general); 2. would not include any documents not mentioning "our terms" in either agenda or text
 
 
-
 ```{r subset}
 
 # time frame 
@@ -88,6 +87,11 @@ speech_dfm <- dfm(speechcorp,
                   remove_separators = TRUE,
                   split_hyphens = TRUE,
                   remove_numbers = TRUE)
+
+speech_dfm <- dfm_trim(speech_dfm,
+                     min_termfreq = 2, min_docfreq = 2)
+
+speech_stm <-asSTMCorpus(speech_dfm)
 ```
 
 *2.2.2 KWIC - Dataframe, Corpus and Dfm*
@@ -356,7 +360,6 @@ kwic_party_sent
 
 Text here
 ```{r topics, echo=FALSE}
-
 # fit a simple model with 6 topics
 mod_1 <- stm(speech_dfm, K = 6, seed = 12345)
 topic_labels <- labelTopics(mod_1)
@@ -417,15 +420,15 @@ party_topic_plot1 <- df_party_prop_longer %>%
   scale_y_continuous() + 
   theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 6))
 party_topic_plot1
+```
 
+
+```{r topics, echo=FALSE}
 ### Visualization 1: topic proportions by party 
-
-# Filtering out empty documents from speech_dfm to match the documents selected by STM so that data can be combined
-speech_dfm_subs <- dfm_subset(speech_dfm, rowSums(speech_dfm)>0)
 
 # combine stm thetas with dfm docvars
 df_theta <- as.data.frame(mod_1$theta)%>%
-  cbind(docvars(speech_dfm_subs))
+  cbind(docvars(speech_dfm))
 
 ####### 
 # naming topics
@@ -467,7 +470,10 @@ party_topic_plot1 <- df_party_prop_longer %>%
   scale_y_continuous() + 
   theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 6))
 party_topic_plot1
+```
 
+
+```{r topics, echo=FALSE}
 ##### Visualization 2: topic prevalence over time 
 
 longdf_theta <- pivot_longer(df_theta, cols = names(df_theta[1:6]), names_to = "topic",values_to = "theta")
@@ -499,10 +505,11 @@ ggplot(longdf_theta_year2,aes(x=year, y=theta.means, group = 1, color = topic)) 
   geom_vline(xintercept = "2016", linetype = "dashed", color = "red")+ # Brexit referendum
   facet_wrap(~party)
 
------------------------
-#### for 12 topics ####
------------------------
-  
+
+```
+
+
+```{r topics, echo=FALSE}
 # fit a simple model with 12 topics
 mod_2 <- stm(speech_dfm, K = 12, seed = 12345)
 labelTopics(mod_2)
@@ -514,22 +521,39 @@ dotchart(exclusivity(mod_2), labels = 1:12)
 #check if topics are coherent
 cohere <- semanticCoherence(mod_2, speech_dfm)
 dotchart(cohere, labels = 1:12)
+```
 
+
+```{r topics, echo=FALSE}
+# topic model prevelance by party
 # new topic model mod3  --> @Amir check why error showss up regarding content covariate lenght? 
-mod_3<- stm(speech_dfm, K = 6, seed = 12345, prevalence = ~ party + date + agenda)
+
+
+mod_3 <- stm(speech_stm$documents, vocab = speech_stm$vocab, 
+             K = 6, ~ party, data=speech_stm$data, seed = 12345)
+#estimating the effect in term of topic-proportions which are the outcome variable. 
+#conditional expectation of topic prevalence given document characteristics.
+mod_3 <- estimateEffect(1:6~party, mod_1)
+
+#plot to see exclusivity of topics
+plot(topicCorr(mod_3))
+#plot to chec
+topicQuality(mod_3, documents = speech_stm$documents)
+dim(mod3$beta$logbeta[[1]])
+
+#code to add labels
+labels <- apply(sageLabels(mod_1)$marginal$frex, 1,
+                function(x){ paste(x[1:4], collapse = "-") })
+
 
 
 # combine stm thetas with dfm docvars --> note: merge thetas with initial dataframe. 
-df_theta <- as.data.frame(mod_3$theta)%>%
+df_theta <- as.data.frame(mod_1$theta)%>%
   cbind(docvars(speech_dfm))
 
 # save and load topic model dataframe
 save(df_theta, file = "df_theta.RData")
 load("df_theta.RData")
-
-
-length(speech_dfm@docvars$date)
-
 
 ```
 
@@ -545,7 +569,6 @@ head(unique(Corp_HouseOfCommons_V2$agenda))
 length(unique(Corp_HouseOfCommons_V2$agenda))
 length(Corp_HouseOfCommons_V2$agenda)
 Corp_HouseOfCommons_V2$agenda["migration"]
-?contains()
 
 ## just to check what the sentiment analysis does: 
 

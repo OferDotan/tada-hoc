@@ -37,6 +37,8 @@ library(plotly)
 library(tm)
 library(dygraphs)
 library(xts)
+library(ggiraphExtra)
+library(car)
 #load data
 Corp_HouseOfCommons_V2  <- readRDS("~/Desktop/tada-hoc/Corp_HouseOfCommons_V2.rds")
 ```
@@ -672,7 +674,10 @@ ggplot(subset(sentiment_long_party, party == c("Con","Lab", "GPEW", "Independent
 ```
 
 ```{r topics-sentiment regression, echo=FALSE}
-head(sentiment_long_party)
+
+# filter sentiment data frame
+sentiment_long_party <- sentiment_long_party %>%
+  filter(party == "Con" | party == "Lab" | party == "GPEW" | party == "Independent" | party == "LibDem" | party == "PlaidCymru" | party == "SDLP" | party == "SNP")
 
 #subset data to just one topic (1)
 sentiment_long_party_topic1 <- sentiment_long_party %>%
@@ -698,7 +703,12 @@ sentiment_long_party_topic5 <- sentiment_long_party %>%
 sentiment_long_party_topic6 <- sentiment_long_party %>%
   filter(topic == names(HoC_theta_data)[6])
 
-# regression models for each topic (effect of topic on sentiment, controlling for party and year)
+#### regression models for each topic (effect of topic on sentiment, controlling for party and year)
+
+og_reg <- lm(sentiment.means~theta.means+year, data=sentiment_long_party)
+summary(og_reg)
+
+# disagregated by topic
 names(HoC_theta_data)[1]
 reg1 <- lm(sentiment.means~theta.means+party+year, data=sentiment_long_party_topic1)
 summary(reg1)
@@ -723,9 +733,57 @@ names(HoC_theta_data)[6]
 reg6 <- lm(sentiment.means~theta.means+party+year, data=sentiment_long_party_topic6)
 summary(reg6)
 
-# think on how best to plot these...
+# make a nice stargazer table of these (but first decide which controls to use or to do nested models)
 ```
 
+```{r topics-sentiment regression plot, echo=FALSE}
+
+# think on how best to plot these...
+
+# this is supposed to work for plotting multivariate regression but it doesn't work
+ggPredict(fit,se=TRUE,interactive=FALSE)
+
+# this is also supposed to work but I didn't get it to... not sure about the function, the line is contant for all topics :(
+equation1=function(x){coef(reg_0)[2]*x+coef(reg_0)[1]+coef(reg_0)[3]}
+
+ggplot(sentiment_long_party,aes(y=sentiment.means,x=theta.means,color=topic))+geom_point()+
+        stat_function(fun=equation1,geom="line",color=scales::hue_pal()(2)[1])+
+  facet_wrap(~topic)
+      
+
+# for all parties (color)
+ggplot(sentiment_long_party,aes(y=sentiment.means,x=theta.means, color = party, fill = party)) +
+  geom_point() +
+  geom_smooth(method="lm", show.legend = FALSE) +
+  theme_bw() + 
+  xlab("Topic Theta Mean") +
+  ylab("Sentiment") +
+  ggtitle("Correlation Between Sentiment and Topic") +
+  facet_wrap(~topic)
+
+
+# for all parties (no color) but want to control for party and year! (seems geom_smooth does not allow multivariate regression formulas)
+ggplot(sentiment_long_party,aes(y=sentiment.means,x=theta.means)) +
+  geom_point() +
+  geom_smooth(method="lm", show.legend = FALSE) +
+  theme_bw() + 
+  xlab("Topic Theta Mean") +
+  ylab("Sentiment") +
+  ggtitle("Correlation Between Sentiment and Topic") +
+  facet_wrap(~topic)
+
+# want to control for party and year!
+
+# for just topic 4, comparing individual parties (no color)
+ggplot(sentiment_long_party_topic4,aes(y=sentiment.means,x=theta.means)) +
+  geom_point() +
+  geom_smooth(method="lm", show.legend = FALSE) +
+  theme_bw() + 
+  xlab("Topic Theta Mean") +
+  ylab("Sentiment") +
+  ggtitle("Correlation Between Sentiment and Topic") +
+  facet_wrap(~party)
+```
 
 ```{r topics_5, echo=FALSE}
 # fit a simple model with 12 topics

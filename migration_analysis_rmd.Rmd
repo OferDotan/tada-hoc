@@ -120,6 +120,21 @@ events <- data.frame(Ref = c("2015 General Election", "Brexit Referendum"),
 
 Justifications and throughts here.
 
+- This section looks at the overall prevalence of immigration-realted debates in the HoC between 2010 and 2020, irrespective of party.
+- We use a density plot that depicts frequency (y) across time. 
+- Any reference is based on the subset and therefore immigration-related.
+- Plot 1 shows the number of individual contributions made over time. Technically speaking, this equals the total count of documents for each month between 2010 and 2020. Substantively, one document reflect one individual's contribution irrespective of its length, tone etc.
+- Findings plot 1: Need to mention spikes and breaks (likely due to the different phases of the HoC; e.g. summer breaks)
+
+- Plot 2 depicts the amount of unique agenda points either dedicated towards or somehow relating to immigration. Substantively, this means that each agenda point, irrespective of its lengths, will be counted.  
+- Findings plot 2: The overall amount of agenda points devoted or somehow related to immigration has almost tripled between 2010 and 2020, with a nearly linear increase over the years. , 
+
+- Plot 3. While plot 1 shows the overall count of unique contributions to immigration-related debates, it does not give substantive insights into the lengths of those contributions. We argue that looking at the overall amount of words used within debates is a relatively clear indicator of the time spent on the respective debate. This is important, as the HoC only has a limited time available, devoting more time towards a debate may indicate certain priorities. In this regard, plot 3 depicts the 6-month-average total amount of words spend on immigration-related debates. By looking at the 6-month averages, we are able to observe whether debate-preferances prevailed over time or whether they only peaked over a short time. To give you an example, looking at the number of words on Dec 2011 indicates the monthly-average amount of words spend on immigration related debates during the second half of 2011. 
+
+- Findings plot 3: While sharp ups and downs were still visible in plots 1 and 2, averaging over 6 months allows for a smoother observation of debate evolution. From January 2012 to November 2014 we are able to observe a steady increase in time spend on debates with regards to their 6-month averages. This is likely due to the spikes showing on a monthly level in both January and June of 2014. The second half of 2014 as well as the first half of 2015 saw less time being devoted to immigration related debates. This suggest that overall, the content on which we selected our subset did not increase in particular prevalence before the 2015 General Election. However, Between May 2015 and June 2016, hence the year following the general election and leading up to the Brexit referendum, saw a major increase in time spend on immigration-related debates. On average, the HoC spend almost twice as much time on immigration related debates during Sep 2015 - Feb 2016 when compared to the period of Dec 2014 - May 2015. Hence, debates seem to have gained in priority after the GEneral election and leading up to the referendum. 
+
+
+was of lower importance to the General 
 
 *Plot 1:* Prevalence of immigration debates over time by month | Counting documents
 
@@ -131,15 +146,18 @@ doc_sum_by_month = HoC_data %>%
   group_by(month=floor_date(date, "month")) %>% 
   summarise(frequency = n()) 
 
-ggplot(doc_sum_by_month, 
-       aes(x=month, y=frequency))+
-  geom_area( fill="#69b3a2", alpha=0.4) +
-  geom_line(color="#69b3a2") +
-  labs(title = "Prevalence of immigration debates",
-       subtitle = "by number of documents")+
-  geom_vline(xintercept = as.Date("2015-05-07"), linetype = "dashed")+ #general election 2015
-  geom_vline(xintercept = as.Date("2016-06-23"), linetype = "dashed", color = "red")+ # Brexit referendum
-  theme(axis.text.x = element_text(angle = 90))
+descr_plot_1 <- xts(x = doc_sum_by_month$frequency, order.by = doc_sum_by_month$month)
+names(descr_plot_1) <- "# unique contributions"
+
+dygraph(descr_plot_1, 
+             main = "Prevalence of immigration debates (by number of unique contributions)", 
+             ylab =  "# of words spent on immigration-realted debates", xlab = "Year (by month)") %>% 
+  dyOptions(labelsUTC = TRUE, fillGraph=TRUE, fillAlpha=0.4, drawGrid = FALSE, colors="#69b3a2") %>%
+  dyRangeSelector() %>%
+  dyCrosshair(direction = "vertical") %>%
+  dyHighlight(highlightCircleSize = 5, highlightSeriesBackgroundAlpha = 0.2, hideOnMouseOut = FALSE)  %>%
+  dyEvent(x="2015-05-07", label = "General Election 2015")%>%
+  dyEvent(x="2016-06-23", label = "Brexit Referendum", color = "red")
 
 ```
 
@@ -157,15 +175,18 @@ doc_sum_by_agenda = sum_by_agenda %>%
   group_by(month=floor_date(month, "month")) %>% 
   summarise(frequency = n()) 
 
-ggplot(doc_sum_by_agenda, 
-       aes(x=month, y=frequency)) +
-  geom_area( fill="#69b3a2", alpha=0.4) +
-  geom_line(color="#69b3a2") +
-  labs(title = "Prevalence of immigration debates",
-       subtitle = "by number of agenda points (unique debates)") +
-  geom_vline(xintercept = as.Date("2015-05-07"), linetype = "dashed") + #general election 2015
-  geom_vline(xintercept = as.Date("2016-06-23"), linetype = "dashed", color = "red") + # Brexit referendum
-  theme(axis.text.x = element_text(angle = 90))
+descr_plot_2 <- xts(x = doc_sum_by_agenda$frequency, order.by = doc_sum_by_agenda$month)
+names(descr_plot_2) <- "# unique debates"
+
+dygraph(descr_plot_2, 
+             main = "Prevalence of immigration debates (by number of unique debates)", 
+             ylab =  "# of words spent on immigration-realted debates", xlab = "Year (by month)") %>% 
+  dyOptions(labelsUTC = TRUE, fillGraph=TRUE, fillAlpha=0.4, drawGrid = FALSE, colors="#69b3a2") %>%
+  dyRangeSelector() %>%
+  dyCrosshair(direction = "vertical") %>%
+  dyHighlight(highlightCircleSize = 5, highlightSeriesBackgroundAlpha = 0.2, hideOnMouseOut = FALSE)  %>%
+  dyEvent(x="2015-05-07", label = "General Election 2015")%>%
+  dyEvent(x="2016-06-23", label = "Brexit Referendum", color = "red")
 ```
 
 *Plot 3:* Prevalence of immigration debates over time by month | Total number of words as a proxy for time spent on debating. 
@@ -178,25 +199,12 @@ doc_sum_by_words = HoC_data %>%
   group_by(month=floor_date(date, "month")) %>% 
   summarise(word_sum = sum(terms)) 
 
-ggplot(doc_sum_by_words, aes(x=month, y=word_sum)) +
-  geom_area( fill="#69b3a2", alpha=0.4) +
-  geom_line(color="#69b3a2") +
-  labs(title = "Prevalence of immigration debates",
-       subtitle = "by amounts of words (proxy for time spent on debates)") +
-  geom_vline(xintercept = as.Date("2015-05-07"), linetype = "dashed")+ #general election 2015
-  geom_vline(xintercept = as.Date("2016-06-23"), linetype = "dashed", color = "red") + # Brexit referendum
-  theme(axis.text.x = element_text(angle = 90))
-
-
-### to make those graphs more interactive jl
-
-# create xts necessary to use dygraph (from here it would replace the ggplot part)
-xts_dygraph <- xts(x = doc_sum_by_words$word_sum, order.by = doc_sum_by_words$month)
-names(xts_dygraph) <- "# words"
+descr_plot_3 <- xts(x = doc_sum_by_words$word_sum, order.by = doc_sum_by_words$month)
+names(descr_plot_3) <- "# words"
 
 # Plot
-interactive_graph <- dygraph(xts_dygraph, 
-             main = "Prevalence of immigration debates (as 6-month average)", 
+dygraph(descr_plot_3, 
+             main = "Prevalence of immigration debates (as 6-month-averages)", 
              ylab =  "# of words spent on immigration-realted debates", xlab = "Year (by month)") %>% 
   dyOptions(labelsUTC = TRUE, fillGraph=TRUE, fillAlpha=0.4, drawGrid = FALSE, colors="#69b3a2") %>%
   dyRangeSelector() %>%
@@ -205,12 +213,6 @@ interactive_graph <- dygraph(xts_dygraph,
   dyRoller(rollPeriod = 6)%>%
   dyEvent(x="2015-05-07", label = "General Election 2015")%>%
   dyEvent(x="2016-06-23", label = "Brexit Referendum", color = "red")
-
-interactive_graph
-
-# to save the widget
-# library(htmlwidgets)
-# saveWidget(k, file="C:/Users/jan/Dropbox/Uni/Hertie/Text as Data/Final Paper/dataverse_files/dygraphs318.html")
 ```
 
 

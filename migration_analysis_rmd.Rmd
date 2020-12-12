@@ -74,25 +74,11 @@ mention that we will look at two basic subsets: One general one with all oberser
 mention events etc. 
 
 
-*2.2.1 General Corpus and Dfm*
+*2.2.1 General Corpus*
 ```{r dataframes, echo=FALSE}
 
 HoC_corp <- corpus(HoC_data)
 
-HoC_dfm <- dfm(HoC_corp, 
-                  remove_punct = TRUE,
-                  remove = stopwords(),
-                  remove_symbols = TRUE,
-                  remove_separators = TRUE,
-                  split_hyphens = TRUE,
-                  remove_numbers = TRUE)
-
-HoC_dfm <- dfm_trim(HoC_dfm,
-                  min_termfreq = 2, 
-                  min_docfreq = 2)
-HoC_dfm <- dfm_subset(HoC_dfm, rowSums(HoC_dfm)>0)
-
-HoC_stm <-asSTMCorpus(HoC_dfm)
 ```
 
 *2.2.2 KWIC - Dataframe, Corpus and Dfm*
@@ -414,6 +400,27 @@ kwic_senti_party_plot
 ## 6. Topics
 
 Text here
+
+*Create Dfm* Include here to also include sentiment in the dfm.
+```{r topics_dfm, echo=FALSE}
+
+HoC_dfm <- dfm(HoC_corp, 
+                  remove_punct = TRUE,
+                  remove = stopwords(),
+                  remove_symbols = TRUE,
+                  remove_separators = TRUE,
+                  split_hyphens = TRUE,
+                  remove_numbers = TRUE)
+
+HoC_dfm <- dfm_trim(HoC_dfm,
+                  min_termfreq = 2, 
+                  min_docfreq = 2)
+HoC_dfm <- dfm_subset(HoC_dfm, rowSums(HoC_dfm)>0)
+
+HoC_stm <-asSTMCorpus(HoC_dfm)
+```
+
+
 ```{r topics, echo=FALSE}
 # fit a simple model with 6 topics
 topic_mod_1 <- stm(HoC_dfm, K = 6, seed = 12345)

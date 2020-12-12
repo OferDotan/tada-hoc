@@ -51,7 +51,7 @@ explain the subset + limitations
 
 # select time frame 
 
-HoC_corp_time <- Corp_HouseOfCommons_V2 %>% 
+HoC_corp_time_0 <- Corp_HouseOfCommons_V2 %>% 
   select(!c(iso3country, party.facts.id, parliament)) %>%
   filter(date>"2009-12-20")
 
@@ -60,7 +60,7 @@ HoC_corp_time <- Corp_HouseOfCommons_V2 %>%
 
 # select relevant content 
 
-HoC_corp_time <- HoC_corp_time[HoC_corp_time$terms>10,]
+HoC_corp_time <- HoC_corp_time[HoC_corp_time_0$terms>10,]
 
 key_words_img <- c("immigra*","Immigra*","refugee*","Refugee*","asylum","Asylum"," migra*"," Migra*")
 HoC_data <- filter(HoC_corp_time, 
@@ -122,6 +122,8 @@ events <- data.frame(Ref = c("2015 General Election", "Brexit Referendum"),
 
 Justifications and throughts here.
 
+- Subset covers 3.05% of total debates in that time period and 6.35% of the total time spend in debates.
+
 - This section looks at the overall prevalence of immigration-realted debates in the HoC between 2010 and 2020, irrespective of party.
 - We use a density plot that depicts frequency (y) across time. 
 - Any reference is based on the subset and therefore immigration-related.
@@ -135,8 +137,20 @@ Justifications and throughts here.
 
 - Findings plot 3: While sharp ups and downs were still visible in plots 1 and 2, averaging over 6 months allows for a smoother observation of debate evolution. From January 2012 to November 2014 we are able to observe a steady increase in time spend on debates with regards to their 6-month averages. This is likely due to the spikes showing on a monthly level in both January and June of 2014. The second half of 2014 as well as the first half of 2015 saw less time being devoted to immigration related debates. This suggest that overall, the content on which we selected our subset did not increase in particular prevalence before the 2015 General Election. However, Between May 2015 and June 2016, hence the year following the general election and leading up to the Brexit referendum, saw a major increase in time spend on immigration-related debates. On average, the HoC spend almost twice as much time on immigration related debates during Sep 2015 - Feb 2016 when compared to the period of Dec 2014 - May 2015. Hence, debates seem to have gained in priority after the GEneral election and leading up to the referendum. 
 
+```{r subset of all debate, echo=FALSE}
 
-was of lower importance to the General 
+# subset as % of overall debates within same time frame 3.05%
+
+nrow(HoC_data)/nrow(HoC_corp_time_0)*100
+
+# as % of time spend 6.35%
+
+sum(HoC_data$terms)/sum(HoC_corp_time_0$terms)*100
+
+
+```
+
+
 
 *Plot 1:* Prevalence of immigration debates over time by month | Counting documents
 

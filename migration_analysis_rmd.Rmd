@@ -17,6 +17,8 @@ Insert Introduction
 
 explian which data has been used and forms the basis of our analysis
 
+To understand how immigrants are framed and perceived when discussed in parliamentary debates, we used a database by Christian Rauh and Jan Schwalbach (2020). This database is unique in its scope, covering all parliamentary debates from 1998 and up until 2020, resulting in 1,956,223 speeches (Rauh & Schwalbach, 2020, p. 10). The text was collected from the digital Commons Hansard that contains the plenary protocols and documents from which speech texts and metadata are extracted. The corpus contains a range of covariates like party affiliation and agenda which facilitate better analysis of the various ways in which the topic of consideration is discussed by the different parties' representatives and depending on the agenda context. For that end, we also leverage the (established to produce reliable estimates) Lexicoder 2015 sentiment dictionary that consists of 2,858-word patterns relating to negative sentiment and 1,709-word patterns, indicating positive sentiment (Young & Soroka, 2012). 
+
 ```{r library}
 #load packages
 library(quanteda)
@@ -42,10 +44,8 @@ Corp_HouseOfCommons_V2  <- readRDS("~/Desktop/tada-hoc/Corp_HouseOfCommons_V2.rd
 ### 2.1 Subset
 
 explain the subset + limitations
-*justifications:* time frame: speeches from 2010 (Justification:Tory manifesto)
-                  content: subset to speeches that either contain or termed (agenda) as "immigra*", "refugee*" or "asylum" (according to v.D)
-*limitations:* 1. loosing short responses (responses in general); 2. would not include any documents not mentioning "our terms" in either agenda or text
-
+Choosing a unit for analysis is a challenging task, and in our case, the desicions we took were related both to substentive and practical consideration of needing to narrow down a very large database to perform a more in depth analysis. Thus, we choose to focus on texts from 2010 to present day. 2010 is a good starting point for our analysis because that was the year of the Tory manifesto and the general elections which resulted with a win for the Conservative party. This allow us for a sufficient time frame that has observations both before our main events of interest, namely the 2015 General Election, the migration wave and the Brexit Referendum, and after, from 2016 until 2020.
+In terms of content, we subset the corpus only to those speeches that contain a reference to key words related to the topic. Specifically, "immigra", "refugee" or "asylum" (according to v.D). This type of subsetting allows us to focus our analysis and remove noise from unrelated text, and yet, contain the limitation of not including any documents who discuss immigration without mentioning the three key terms chosen in either agenda description or text. Further, by this subseting we are very likely to loose short responses to speeches carried out. 
 
 ```{r subset}
 
@@ -254,6 +254,7 @@ ggplot(sum_by_party, aes(x = month, y = party, fill = party)) +
 ## 4. Keywords in Context
 
 Justification and Thoughts here.
+To understand better how key words are discussed in the text we first generated a key words in context data frame which constraints the corpus to only words that appear 10 words before a key word and 10 words after. 
 
 *KWIC - Wordcloud incl. keywords*
 ```{r kwic, echo=FALSE}
@@ -273,6 +274,22 @@ HoC_kwic_dfm_no_key <- dfm(HoC_kwic_corp,
                        remove_numbers = TRUE)
 
 textplot_wordcloud(HoC_kwic_dfm_no_key, max_words = 90, color = rev(RColorBrewer::brewer.pal(10, "RdBu")))
+```
+
+*Plot* Top words co-concurence matrix of key words in context
+
+```{r}
+#plot feature concourence matrix
+HoC_kwic_fcm <-
+  tokens(HoC_kwic_corp, remove_punct = TRUE) %>%
+  tokens_tolower() %>%
+  tokens_remove(stopwords("english"), padding = FALSE) %>%
+  fcm(context = "window", window = 5, tri = FALSE)
+# choose 30 most frequency features
+topfeats <- names(topfeatures(HoC_kwic_fcm, 30))
+# select the top 30 features only, plot the network
+set.seed(100)
+textplot_network(fcm_select(HoC_kwic_fcm, topfeats), min_freq = 0.8)
 ```
 
 *Frequency of words related to migration (including key terms)*
@@ -354,8 +371,6 @@ party_senti_plot <- ggplot(HoC_senti_data_party)+
 # turn into interactive graph
 party_senti_plot <- ggplotly(party_senti_plot)
 party_senti_plot
-
-
 
 ```
 

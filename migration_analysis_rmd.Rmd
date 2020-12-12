@@ -570,6 +570,7 @@ k
 # make interactive
 k <- ggplotly(k)
 k
+# Jan: still needs vlines for election and brexit 
 ```
 
 ```{r topics_4, echo=FALSE}
@@ -618,6 +619,61 @@ ggplot(subset(sentiment_long_party, party == c("Con","Lab", "GPEW", "Independent
   facet_wrap(~party)
 
 
+```
+
+```{r topics-sentiment regression, echo=FALSE}
+head(sentiment_long_party)
+
+#subset data to just one topic (1)
+sentiment_long_party_topic1 <- sentiment_long_party %>%
+  filter(topic == names(HoC_theta_data)[1])
+
+#subset data to just one topic (2)
+sentiment_long_party_topic2 <- sentiment_long_party %>%
+  filter(topic == names(HoC_theta_data)[2])
+
+#subset data to just one topic (3)
+sentiment_long_party_topic3 <- sentiment_long_party %>%
+  filter(topic == names(HoC_theta_data)[3])
+
+#subset data to just one topic (4)
+sentiment_long_party_topic4 <- sentiment_long_party %>%
+  filter(topic == names(HoC_theta_data)[4])
+
+#subset data to just one topic (5)
+sentiment_long_party_topic5 <- sentiment_long_party %>%
+  filter(topic == names(HoC_theta_data)[5])
+
+#subset data to just one topic (6)
+sentiment_long_party_topic6 <- sentiment_long_party %>%
+  filter(topic == names(HoC_theta_data)[6])
+
+# regression models for each topic (effect of topic on sentiment, controlling for party and year)
+names(HoC_theta_data)[1]
+reg1 <- lm(sentiment.means~theta.means+party+year, data=sentiment_long_party_topic1)
+summary(reg1)
+
+names(HoC_theta_data)[2]
+reg2 <- lm(sentiment.means~theta.means+party+year, data=sentiment_long_party_topic2)
+summary(reg2)
+
+names(HoC_theta_data)[3]
+reg3 <- lm(sentiment.means~theta.means+party+year, data=sentiment_long_party_topic3)
+summary(reg3)
+
+names(HoC_theta_data)[4]
+reg4 <- lm(sentiment.means~theta.means+party+year, data=sentiment_long_party_topic4)
+summary(reg4)
+
+names(HoC_theta_data)[5]
+reg5 <- lm(sentiment.means~theta.means+party+year, data=sentiment_long_party_topic5)
+summary(reg5)
+
+names(HoC_theta_data)[6]
+reg6 <- lm(sentiment.means~theta.means+party+year, data=sentiment_long_party_topic6)
+summary(reg6)
+
+# think on how best to plot these...
 ```
 
 

@@ -344,8 +344,10 @@ sentiment$sent_prob <- 1/(1 + exp(-sentiment$sentiment))
 
 # add sentiment to initial data frame
 HoC_data = cbind(HoC_data,sentiment) 
+```
 
-## Graph 1: Sentiment
+*Graph 1: Overall Sentiment*
+```{r sentiment graph 1, echo=FALSE}
 
 HoC_data$date <- as.Date(HoC_data$date, format="%Y-%m-%d")
 HoC_senti_data <- data.frame(date = HoC_data$date, 
@@ -365,8 +367,10 @@ ggplot(HoC_senti_data_month, aes(x=month, y=avg_sentiment))+
              colour = c("black","red"),
              show.legend = FALSE, linetype ="dashed")+
   theme(axis.text.x = element_text(angle = 90))
+```
 
-## Graph 2: Sentiment by party
+*Graph 2: Sentiment by party*
+```{r sentiment graph 2, echo=FALSE}
 
 HoC_data$date <- as.Date(HoC_data$date, format="%Y-%m-%d")
 
@@ -397,8 +401,8 @@ party_senti_plot
 
 ```
 
-*Sentiment | Keywords in Ceontext*
-```{r sentiment_2, echo=FALSE}
+*Sentiment | Keywords in Context*
+```{r sentiment kwic, echo=FALSE}
 
 kwic_sentiment <- textstat_polarity(HoC_kwic_corp, 
                                     data_dictionary_LSD2015)
@@ -420,6 +424,10 @@ kwic_date <- merge(HoC_kwic,
                      by = "docname", 
                      all.x = TRUE, 
                      sort = FALSE) # will need to merge based on the docname, as this is the same as the initial doc_id.
+```
+
+*Graph 3: KWIC sentiment*
+```{r sentiment kwic graph 3, echo=FALSE}
 
 kwic_date$date <- as.Date(kwic_date$date, format="%Y-%m-%d")
 
@@ -439,8 +447,10 @@ ggplot(HoC_kwic_senti_month, aes(x=month, y=avg_sentiment)) +
   geom_vline(xintercept = as.Date("2015-05-07"), linetype = "dashed")+ #general election 2015
   geom_vline(xintercept = as.Date("2016-06-23"), linetype = "dashed", color = "red") + # Brexit referendum
   theme(axis.text.x = element_text(angle = 90))
+```
 
-## KWIC sentiment by party
+*Graph 4: KWIC sentiment by party*
+```{r sentiment kwic graph 4, echo=FALSE}
 
 kwic_date$date <- as.Date(kwic_date$date, format="%Y-%m-%d")
 

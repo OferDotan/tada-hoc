@@ -706,63 +706,64 @@ ggplot(subset(sentiment_long_party, party == c("Con","Lab", "GPEW", "Independent
 ```
 
 ```{r topics-sentiment regression, echo=FALSE}
-
 # filter sentiment data frame
-sentiment_long_party <- sentiment_long_party %>%
-  filter(party == "Con" | party == "Lab" | party == "GPEW" | party == "Independent" | party == "LibDem" | party == "PlaidCymru" | party == "SDLP" | party == "SNP")
+
+theta_data_long_reg <- theta_data_long %>%
+  filter(party == "Con" | party == "Lab" |  party == "LibDem" | party == "SNP" | party == "DUP")
+
 
 #subset data to just one topic (1)
-sentiment_long_party_topic1 <- sentiment_long_party %>%
+sentiment_topic1 <- theta_data_long_reg %>%
   filter(topic == names(HoC_theta_data)[1])
 
 #subset data to just one topic (2)
-sentiment_long_party_topic2 <- sentiment_long_party %>%
+sentiment_topic2 <- theta_data_long_reg %>%
   filter(topic == names(HoC_theta_data)[2])
 
 #subset data to just one topic (3)
-sentiment_long_party_topic3 <- sentiment_long_party %>%
+sentiment_topic3 <- theta_data_long_reg %>%
   filter(topic == names(HoC_theta_data)[3])
 
 #subset data to just one topic (4)
-sentiment_long_party_topic4 <- sentiment_long_party %>%
+sentiment_topic4 <- theta_data_long_reg %>%
   filter(topic == names(HoC_theta_data)[4])
 
 #subset data to just one topic (5)
-sentiment_long_party_topic5 <- sentiment_long_party %>%
+sentiment_topic5 <- theta_data_long_reg %>%
   filter(topic == names(HoC_theta_data)[5])
 
 #subset data to just one topic (6)
-sentiment_long_party_topic6 <- sentiment_long_party %>%
+sentiment_topic6 <- theta_data_long_reg %>%
   filter(topic == names(HoC_theta_data)[6])
 
 #### regression models for each topic (effect of topic on sentiment, controlling for party and year)
 
-og_reg <- lm(sentiment.means~theta.means+year, data=sentiment_long_party)
+og_reg <- lm(sentiment~theta+date+party, data=theta_data_long_reg)
 summary(og_reg)
 
 # disagregated by topic
 names(HoC_theta_data)[1]
-reg1 <- lm(sentiment.means~theta.means+party+year, data=sentiment_long_party_topic1)
+reg1 <- lm(sentiment~theta+party+date, data=sentiment_topic1)
 summary(reg1)
 
 names(HoC_theta_data)[2]
-reg2 <- lm(sentiment.means~theta.means+party+year, data=sentiment_long_party_topic2)
+reg2 <- lm(sentiment~theta+party+date, data=sentiment_topic2)
 summary(reg2)
 
 names(HoC_theta_data)[3]
-reg3 <- lm(sentiment.means~theta.means+party+year, data=sentiment_long_party_topic3)
+reg3 <- lm(sentiment~theta+party+date, data=sentiment_topic3)
 summary(reg3)
 
 names(HoC_theta_data)[4]
-reg4 <- lm(sentiment.means~theta.means+party+year, data=sentiment_long_party_topic4)
+reg4 <- lm(sentiment~theta+party+date, data=sentiment_topic4)
 summary(reg4)
 
 names(HoC_theta_data)[5]
-reg5 <- lm(sentiment.means~theta.means+party+year, data=sentiment_long_party_topic5)
+reg5 <- lm(sentiment~theta+party+date, data=sentiment_topic5)
 summary(reg5)
 
 names(HoC_theta_data)[6]
-reg6 <- lm(sentiment.means~theta.means+party+year, data=sentiment_long_party_topic6)
+reg6 <- lm(sentiment~theta+party+date, data=sentiment_topic6)
 summary(reg6)
 
 # make a nice stargazer table of these (but first decide which controls to use or to do nested models)
@@ -778,15 +779,15 @@ ggPredict(fit,se=TRUE,interactive=FALSE)
 # this is also supposed to work but I didn't get it to... not sure about the function, the line is contant for all topics :(
 equation1=function(x){coef(reg_0)[2]*x+coef(reg_0)[1]+coef(reg_0)[3]}
 
-ggplot(sentiment_long_party,aes(y=sentiment.means,x=theta.means,color=topic))+geom_point()+
+ggplot(theta_data_long_reg,aes(y=sentiment,x=theta,color=topic))+geom_point()+
         stat_function(fun=equation1,geom="line",color=scales::hue_pal()(2)[1])+
   facet_wrap(~topic)
       
 
 # for all parties (color)
-ggplot(sentiment_long_party,aes(y=sentiment.means,x=theta.means, color = party, fill = party)) +
-  geom_point() +
-  geom_smooth(method="lm", show.legend = FALSE) +
+ggplot(theta_data_long_reg,aes(y=sentiment,x=theta, color = party, fill = party)) +
+  #geom_point() +
+  geom_smooth(method="lm") +
   theme_bw() + 
   xlab("Topic Theta Mean") +
   ylab("Sentiment") +
@@ -795,8 +796,8 @@ ggplot(sentiment_long_party,aes(y=sentiment.means,x=theta.means, color = party, 
 
 
 # for all parties (no color) but want to control for party and year! (seems geom_smooth does not allow multivariate regression formulas)
-ggplot(sentiment_long_party,aes(y=sentiment.means,x=theta.means)) +
-  geom_point() +
+ggplot(theta_data_long_reg,aes(y=sentiment,x=theta)) +
+  #geom_point() +
   geom_smooth(method="lm", show.legend = FALSE) +
   theme_bw() + 
   xlab("Topic Theta Mean") +
@@ -807,7 +808,7 @@ ggplot(sentiment_long_party,aes(y=sentiment.means,x=theta.means)) +
 # want to control for party and year!
 
 # for just topic 4, comparing individual parties (no color)
-ggplot(sentiment_long_party_topic4,aes(y=sentiment.means,x=theta.means)) +
+ggplot(sentiment_topic4,aes(y=sentiment,x=theta)) +
   geom_point() +
   geom_smooth(method="lm", show.legend = FALSE) +
   theme_bw() + 

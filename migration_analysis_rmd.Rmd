@@ -524,16 +524,16 @@ HoC_stm <-asSTMCorpus(HoC_dfm)
 ########################
 # Running topic model 1#
 ########################
-
 # fit a simple model with 6 topics
 topic_mod_1 <- stm(HoC_dfm, K = 6, seed = 12345)
 topic_labels <- labelTopics(topic_mod_1)
-#plot(topic_mod_1, type = "labels", labeltype = "prob") # or frex, lift, score
+plot(topic_mod_1, type = "labels", labeltype = "prob") # or frex, lift, score
 
 # extract paragraphs most aligned with each topic
-thoughts <- findThoughts(topic_mod_1, texts = texts(HoC_corp), n=1, topics = c(1:6)) #n=how many documents
+thoughts <- findThoughts(topic_mod_1, texts = texts(HoC_corp), n=1, topics = c(1:6))#n=how many documents
 #plot thoughts for topics
 stm::plotQuote(thoughts$docs$`Topic 4`, width = 80, text.cex=0.6)
+save(thoughts, file = "thoughts.RData")
 
 # wordcloud
 cloud(topic_mod_1, topic = 6, max_words = 90, color = c(color = rev(RColorBrewer::brewer.pal(10, "RdBu"))))
@@ -543,8 +543,21 @@ dotchart(exclusivity(topic_mod_1), labels = 1:6, color = 1:6)
 
 # check if topics are coherent
 cohere <- semanticCoherence(topic_mod_1, HoC_dfm)
-dotchart(cohere, labels = 1:6, color = 1:6) 
+dotchart(cohere, labels = 1:6, color = 1:6)
 
+#topic model key words in context
+topic_mod_2 <- stm(HoC_kwic_dfm, K = 6, seed = 12345)
+topic_labels_2 <- labelTopics(topic_mod_2)
+plot(topic_mod_2, type = "labels", labeltype = "prob") 
+# extract paragraphs most aligned with each topic
+thoughts_2 <- findThoughts(topic_mod_2, texts = texts(HoC_kwic_corp), n=1, topics = c(1:6)) #n=how many documents
+save(thoughts_2, file = "thoughts_2.RData")
+#plot thoughts for topics
+stm::plotQuote(thoughts_2$docs, width = 80, text.cex=0.6)
+```
+
+
+```{r topics dataframe, echo=FALSE}
 ###################################
 # Creating topic model data frame #
 ###################################

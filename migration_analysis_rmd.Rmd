@@ -662,7 +662,8 @@ k
 sentiment_data_long <- theta_data_long %>%
   mutate(year = str_sub(date, 1, 4)) %>%
   group_by(year, topic, party) %>% 
-  summarise(sentiment.means = mean(sentiment))
+  summarise(sentiment.means = mean(sentiment)) %>%
+  filter(party == "Con" | party == "Lab" | party == "GPEW" | party == "Independent" | party == "LibDem" | party == "PlaidCymru" | party == "SDLP" | party == "SNP")
 
 sentiment_long_party <- cbind(sentiment_data_long, theta.means = theta_long_data_year_1$theta.means)
 

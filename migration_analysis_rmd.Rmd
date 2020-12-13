@@ -789,7 +789,7 @@ ggplot(theta_data_long_reg,aes(y=sentiment,x=theta, color = party, fill = party)
   #geom_point() +
   geom_smooth(method="lm") +
   theme_bw() + 
-  xlab("Topic Theta Mean") +
+  xlab("Topic Theta") +
   ylab("Sentiment") +
   ggtitle("Correlation Between Sentiment and Topic") +
   facet_wrap(~topic)
@@ -800,7 +800,7 @@ ggplot(theta_data_long_reg,aes(y=sentiment,x=theta)) +
   #geom_point() +
   geom_smooth(method="lm", show.legend = FALSE) +
   theme_bw() + 
-  xlab("Topic Theta Mean") +
+  xlab("Topic Theta") +
   ylab("Sentiment") +
   ggtitle("Correlation Between Sentiment and Topic") +
   facet_wrap(~topic)
@@ -812,7 +812,7 @@ ggplot(sentiment_topic4,aes(y=sentiment,x=theta)) +
   geom_point() +
   geom_smooth(method="lm", show.legend = FALSE) +
   theme_bw() + 
-  xlab("Topic Theta Mean") +
+  xlab("Topic Theta") +
   ylab("Sentiment") +
   ggtitle("Correlation Between Sentiment and Topic") +
   facet_wrap(~party)

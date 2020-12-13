@@ -531,7 +531,9 @@ topic_labels <- labelTopics(topic_mod_1)
 #plot(topic_mod_1, type = "labels", labeltype = "prob") # or frex, lift, score
 
 # extract paragraphs most aligned with each topic
-findThoughts(topic_mod_1, texts = texts(HoC_para_corp), topics = c(1:6))
+thoughts <- findThoughts(topic_mod_1, texts = texts(HoC_corp), n=1, topics = c(1:6)) #n=how many documents
+#plot thoughts for topics
+stm::plotQuote(thoughts$docs$`Topic 4`, width = 80, text.cex=0.6)
 
 # wordcloud
 cloud(topic_mod_1, topic = 6, max_words = 90, color = c(color = rev(RColorBrewer::brewer.pal(10, "RdBu"))))

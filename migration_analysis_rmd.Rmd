@@ -17,7 +17,7 @@ Knowing that in part these described transformations were driven by discussions 
 
 ## 2. Packages and data
 
-explian which data has been used and forms the basis of our analysis
+explain which data has been used and forms the basis of our analysis
 
 To understand how immigrants are framed and perceived when discussed in parliamentary debates, we used a database called ParlSpeech V2 by Christian Rauh and Jan Schwalbach (2020). This database is unique in its scope, covering all parliamentary debates from 1998 and up until 2020, resulting in 1,956,223 speeches (Rauh & Schwalbach, 2020, p. 10). The text was collected from the digital Commons Hansard that contains the plenary protocols and documents from which speech texts and metadata are extracted. The corpus contains a range of covariates like party affiliation and agenda which facilitate better analysis of the various ways in which the topic of consideration is discussed by the different parties' representatives and depending on the agenda context. For that end, we also leverage the (established to produce reliable estimates) Lexicoder 2015 sentiment dictionary that consists of 2,858-word patterns relating to negative sentiment and 1,709-word patterns, indicating positive sentiment (Young & Soroka, 2012). 
 
@@ -64,7 +64,7 @@ HoC_corp_time_0 <- Corp_HouseOfCommons_V2 %>%
 
 # select relevant content 
 
-HoC_corp_time <- HoC_corp_time[HoC_corp_time_0$terms>10,]
+HoC_corp_time <- HoC_corp_time_0[HoC_corp_time_0$terms>10,]
 
 key_words_img <- c("immigra*","Immigra*","refugee*","Refugee*","asylum","Asylum"," migra*"," Migra*")
 HoC_data <- filter(HoC_corp_time, 
@@ -118,6 +118,8 @@ events <- data.frame(Ref = c("2015 General Election", "Brexit Referendum"),
                      vals = c("2015-05-07", "2016-06-23"),
                      stringsAsFactors = FALSE)
 
+# could also specify e.g. colors (could also not do it ;) :D ) 
+
 ```
 
 
@@ -147,9 +149,19 @@ Justifications and throughts here.
 
 nrow(HoC_data)/nrow(HoC_corp_time_0)*100
 
-# as % of time spend 6.35%
+# subset as % of time spend 6.35%
 
 sum(HoC_data$terms)/sum(HoC_corp_time_0$terms)*100
+
+
+# % contribution within subset by party
+
+party_contr <- HoC_data %>%
+  group_by(party) %>% 
+  summarise(contribution=(sum(terms)/sum(HoC_data$terms))*100)
+
+party_contr[order(party_contr$contribution, decreasing = TRUE),]
+
 
 
 ```

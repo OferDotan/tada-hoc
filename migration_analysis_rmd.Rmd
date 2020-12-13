@@ -585,6 +585,7 @@ Topic Visualizations:
 
 # grouping by party and generating means 
 theta_data_party <- HoC_theta_data %>%
+  filter(party == "Con" | party == "Lab" |  party == "LibDem" | party == "SNP" | party == "DUP") %>%
   group_by(party)
 
 theta_data_party_mean <- aggregate(theta_data_party[, 1:6], 
@@ -630,16 +631,15 @@ theta_data_long <- pivot_longer(
 theta_long_data_year <- theta_data_long %>%
   mutate(year = str_sub(date, 1, 4)) %>%
   group_by(year, topic) %>% 
-  summarise(theta.means = mean(theta))
+  dplyr::summarise(theta.means = mean(theta))
 
-topics_by_time_plot <- ggplot(theta_long_data_year,aes(x=year, y=theta.means, group = 1, color = topic)) + 
+
+ggplot(theta_long_data_year,aes(x=year, y=theta.means, group = 1, color = topic)) + 
   geom_point() +
   geom_line() +
   geom_vline(xintercept = "2015", linetype = "dashed")+ #general election 2015
   geom_vline(xintercept = "2016", linetype = "dashed", color = "red")+ # Brexit referendum
   facet_wrap(~topic)
-
-topics_by_time_plot
 ```
 
 ```{r ind_topics_by_time_by_party_plot, echo=FALSE}
@@ -649,15 +649,8 @@ topics_by_time_plot
 theta_long_data_year_1 <- theta_data_long %>%
   mutate(year = str_sub(date, 1, 4)) %>%
   group_by(year, topic, party) %>% 
-  summarise(theta.means = mean(theta)) %>%
-  filter(party == "Con" | party == "Lab" | party == "GPEW" | party == "Independent" | party == "LibDem" | party == "PlaidCymru" | party == "SDLP" | party == "SNP")
-
-# plot all parties together (plot by party, color by topic)
-ggplot()  +
-  geom_line(data = theta_long_data_year_1, aes(x=year, y = theta.means, group = topic, colour = topic)) + 
-  geom_vline(xintercept = "2015", linetype = "dashed")+ #general election 2015
-  geom_vline(xintercept = "2016", linetype = "dashed", color = "red")+ # Brexit referendum
-  facet_wrap(~party)
+  dplyr::summarise(theta.means = mean(theta)) %>%
+  filter(party == "Con" | party == "Lab" |  party == "LibDem" | party == "SNP" | party == "DUP")
 
 # plot all parties together (plot by topic, color by party)
 k <- ggplot()  +
@@ -666,15 +659,14 @@ k <- ggplot()  +
   geom_vline(xintercept = "2015", linetype = "dashed")+ #general election 2015
   geom_vline(xintercept = "2016", linetype = "dashed", color = "red")+ # Brexit referendum
   facet_wrap(~topic)
-k
 
 # make interactive
 k <- ggplotly(k)
-k
 
+k
 ```
 
-```{r topics_4, echo=FALSE}
+```{r topics_4 Amir: I don't think we need these anymore, echo=FALSE}
 
 # graph sentiment by topics
 sentiment_data_long <- theta_data_long %>%
@@ -756,86 +748,53 @@ sentiment_topic6 <- theta_data_long_reg %>%
 
 #### regression models for each topic (effect of topic on sentiment, controlling for party and year)
 
-og_reg <- lm(sentiment~theta+date+party, data=theta_data_long_reg)
-summary(og_reg)
-
 # disagregated by topic
-names(HoC_theta_data)[1]
+
+# names(HoC_theta_data)[1]
 reg1 <- lm(sentiment~theta+party+date, data=sentiment_topic1)
-summary(reg1)
 
-names(HoC_theta_data)[2]
+# names(HoC_theta_data)[2]
 reg2 <- lm(sentiment~theta+party+date, data=sentiment_topic2)
-summary(reg2)
 
-names(HoC_theta_data)[3]
+# names(HoC_theta_data)[3]
 reg3 <- lm(sentiment~theta+party+date, data=sentiment_topic3)
-summary(reg3)
 
-names(HoC_theta_data)[4]
+# names(HoC_theta_data)[4]
 reg4 <- lm(sentiment~theta+party+date, data=sentiment_topic4)
-summary(reg4)
 
-names(HoC_theta_data)[5]
+# names(HoC_theta_data)[5]
 reg5 <- lm(sentiment~theta+party+date, data=sentiment_topic5)
-summary(reg5)
 
-names(HoC_theta_data)[6]
+# names(HoC_theta_data)[6]
 reg6 <- lm(sentiment~theta+party+date, data=sentiment_topic6)
-summary(reg6)
 
-# make a nice stargazer table of these (but first decide which controls to use or to do nested models)
 library(stargazer)
-stargazer(reg1, reg2, reg3, reg4, reg5, reg6, type="text")
+#stargazer(reg1, reg2, reg3, reg4, reg5, reg6, column.labels = c(names(HoC_theta_data)[1:6]), type = "text")
+stargazer(reg1, reg2, reg3, reg4, reg5, reg6, type = "text")
 ```
 
 ```{r topics-sentiment regression plot, echo=FALSE}
-
-# think on how best to plot these...
-
-# this is supposed to work for plotting multivariate regression but it doesn't work
-ggPredict(fit,se=TRUE,interactive=FALSE)
-
-# this is also supposed to work but I didn't get it to... not sure about the function, the line is contant for all topics :(
-equation1=function(x){coef(reg_0)[2]*x+coef(reg_0)[1]+coef(reg_0)[3]}
-
-ggplot(theta_data_long_reg,aes(y=sentiment,x=theta,color=topic))+geom_point()+
-        stat_function(fun=equation1,geom="line",color=scales::hue_pal()(2)[1])+
+# for all parties (no color)
+ggplot(theta_data_long_reg,aes(y=sentiment,x=theta)) +
+  #geom_point(alpha = 0.05, shape = ".") +
+  geom_smooth(method="lm", show.legend = FALSE) +
+  theme_bw() + 
+  xlab("Topic Theta") +
+  ylab("Sentiment") +
+  ggtitle("Correlation Between Sentiment and Topic") +
   facet_wrap(~topic)
-      
+```
 
+```{r topics-sentiment regression plot by party, echo=FALSE}
 # for all parties (color)
 ggplot(theta_data_long_reg,aes(y=sentiment,x=theta, color = party, fill = party)) +
-  #geom_point() +
+  #geom_point(alpha = 0.05, shape = ".") +
   geom_smooth(method="lm") +
   theme_bw() + 
   xlab("Topic Theta") +
   ylab("Sentiment") +
   ggtitle("Correlation Between Sentiment and Topic") +
   facet_wrap(~topic)
-
-
-# for all parties (no color) but want to control for party and year! (seems geom_smooth does not allow multivariate regression formulas)
-ggplot(theta_data_long_reg,aes(y=sentiment,x=theta)) +
-  #geom_point() +
-  geom_smooth(method="lm", show.legend = FALSE) +
-  theme_bw() + 
-  xlab("Topic Theta") +
-  ylab("Sentiment") +
-  ggtitle("Correlation Between Sentiment and Topic") +
-  facet_wrap(~topic)
-
-# want to control for party and year!
-
-# for just topic 4, comparing individual parties (no color)
-ggplot(sentiment_topic4,aes(y=sentiment,x=theta)) +
-  geom_point() +
-  geom_smooth(method="lm", show.legend = FALSE) +
-  theme_bw() + 
-  xlab("Topic Theta") +
-  ylab("Sentiment") +
-  ggtitle("Correlation Between Sentiment and Topic") +
-  facet_wrap(~party)
 ```
 
 

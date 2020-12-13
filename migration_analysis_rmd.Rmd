@@ -162,7 +162,14 @@ party_contr <- HoC_data %>%
 
 party_contr[order(party_contr$contribution, decreasing = TRUE),]
 
+# time sepnd on immigration related debates during the year before Election compared to the year before Brexit
 
+
+contr_elect <- sum(HoC_data$terms[HoC_data$date <= "2015-05-07" & HoC_data$date >= "2014-05-07"])
+
+contr_brex <- sum(HoC_data$terms[HoC_data$date <= "2016-06-23" & HoC_data$date >= "2015-06-23"])
+
+contr_brex/contr_elect # 76.3% more time spend on immigration related debates in year leading up to Brexit compared to the one leading up to election.
 
 ```
 

@@ -14,6 +14,7 @@ knitr::opts_chunk$set(echo = TRUE)
 Frame: we are thinkTank approached by policy makers from the immigration office with the task of informing how immigration was discussed in the HoC. 
 - covid, uk entering hardship, immigration will become a sensitive topic, they want to be prepared. 
 - they want to get what the uk relation to immigration is, in terms of intensity of discussions and in terms of sentiment
+-understanding topics and sentiment is important for coalition building 
 - they have quantities data, but wish to understand better the discourse. 
 for that, we came with the following guiding hypothesis:
 1. 
@@ -62,7 +63,7 @@ Corp_HouseOfCommons_V2  <- readRDS("~/Desktop/tada-hoc/Corp_HouseOfCommons_V2.rd
 ### 2.1 Subset
 
 explain the subset + limitations
-Choosing a unit for analysis is a challenging task, and in our case, the desicions we took were related both to substentive and practical consideration of needing to narrow down a very large database to perform a more in depth analysis. Thus, we choose to focus on texts from 2010 to present day. 2010 is a good starting point for our analysis because that was the year of the Tory manifesto and the general elections which resulted with a win for the Conservative party. This allow us for a sufficient time frame that has observations both before our main events of interest, namely the 2015 General Election, the migration wave and the Brexit Referendum, and after, from 2016 until 2020.
+Choosing a unit for analysis is a challenging task, and in our case, the desicions we took were related both to substantive and practical consideration of needing to narrow down a very large database to perform a more in depth analysis. Thus, we choose to focus on texts from 2010 to present day. 2010 is a good starting point for our analysis because that was the year of the Tory manifesto and the general elections which resulted with a win for the Conservative party. This allow us for a sufficient time frame that has observations both before our main events of interest, namely the 2015 General Election, the migration wave and the Brexit Referendum, and after, from 2016 until 2020.
 In terms of content, we subset the corpus only to those speeches that contain a reference to key words related to the topic. Specifically, "immigra", "refugee" or "asylum" because we expect parliamentary debates to be explicit in their language, meaning that if immigration is discussed one of these key words will show either in the agenda description or in the speech itself and therefore we think this method would allow us to capture most of the substantive debates regarding immigration (Van Dijk, 2000). This type of subsetting allows us to focus our analysis and remove noise from unrelated text, and yet, contain the limitation of not including any documents who discuss immigration without mentioning the three key terms chosen in either agenda description or text. Further, by this subsetting we are very likely to loose short responses to speeches carried out. 
 
 ```{r subset}
@@ -274,6 +275,7 @@ dygraph(descr_plot_3,
 HoC_data$date <- as.Date(HoC_data$date, format="%Y-%m-%d")
 
 sum_by_party = HoC_data %>% 
+  filter(party == "Con" | party == "Lab" |  party == "LibDem" | party == "SNP" | party == "DUP") %>%
   group_by(month=floor_date(date, "month"), party = party) %>% 
   summarise(frequency = sum(terms)) 
 
@@ -285,8 +287,11 @@ ggplot(sum_by_party, aes(x = month, y = party, fill = party)) +
   geom_vline(xintercept = as.Date("2015-05-07"), linetype = "dashed")+ #general election 2015
   geom_vline(xintercept = as.Date("2016-06-23"), linetype = "dashed", color = "red") # Brexit referendum
 
-
 ```
+
+This density plot gives us a sense of the frequency each party discussed each party discussed each month during the time frame of our research. Basically what it does it counts how many words each party each party invested in speaking about immigration related topics. So for example, while the SNP and the DUP spoke more about immigration after Brexit, other parties exhibit a more constant trend of engagement with immigration related speech. Importantly, the information that can be gathered from this graph is limited in that it does not tell us anything about substance of these speeches, but crudely how many words were used. Nevertheless, this descriptive visualization does help us get an initial sense about the prevelance of immigration related speech in each of the parties we are focusing on.      
+
+
 
 ## 4. Keywords in Context
 
@@ -314,7 +319,7 @@ textplot_wordcloud(HoC_kwic_dfm_no_key, max_words = 90, color = rev(RColorBrewer
 ```
 
 *Plot* Top words co-concurence matrix of key words in context
-
+#####I think we could probably erase this graph/put in the appendix!
 ```{r}
 #plot feature concourence matrix
 HoC_kwic_fcm <-
@@ -330,6 +335,7 @@ textplot_network(fcm_select(HoC_kwic_fcm, topfeats), min_freq = 0.8)
 ```
 
 *Frequency of words related to migration (including key terms)*
+## also this work freq graph -- either we use a word cloud or this, not both. I think word cloud gives a better sense of whats going on than this
 ```{r kwic_3, echo=FALSE}
 
 HoC_dfm_word_freq <- textstat_frequency(HoC_dfm, n=100)
@@ -339,11 +345,9 @@ HoC_dfm_word_freq$feature <- with(HoC_dfm_word_freq, reorder(feature, -frequency
 ggplot(HoC_dfm_word_freq, 
        aes(x = feature, y = frequency)) +
   geom_point() + 
-  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+  theme(axis.text.x = element_text(angle = 60, hjust = 1))
 
 ```
-
-
 
 
 ## 5. Sentiment
@@ -415,6 +419,9 @@ party_senti_plot
 
 ```
 
+From plotting sentiments toward immigration by party 
+
+
 *Sentiment | Keywords in Context*
 ```{r sentiment kwic, echo=FALSE}
 
@@ -441,6 +448,7 @@ kwic_date <- merge(HoC_kwic,
 ```
 
 *Graph 3: KWIC sentiment*
+#### I think this should also be discarded. It is kind of strange maybe to plot sentiment based on bubbles of 40 words at a time, or, we could justify it by assuming that in these bubbles speeches are likely to be really related to immigration which is also where most sentiment is likely to be voiced. But I am not that convinced by this myself.  
 ```{r sentiment kwic graph 3, echo=FALSE}
 
 kwic_date$date <- as.Date(kwic_date$date, format="%Y-%m-%d")
@@ -503,8 +511,6 @@ Text here
 *Create Dfm* Include here to also include sentiment in the dfm.
 ```{r topics_dfm, echo=FALSE}
 
-HoC_corp <- corpus(HoC_data) # re-run here to include sentiment
-
 HoC_dfm <- dfm(HoC_corp, 
                   remove_punct = TRUE,
                   remove = stopwords(),
@@ -532,34 +538,20 @@ topic_labels <- labelTopics(topic_mod_1)
 plot(topic_mod_1, type = "labels", labeltype = "prob") # or frex, lift, score
 
 # extract paragraphs most aligned with each topic
-thoughts <- findThoughts(topic_mod_1, texts = texts(HoC_corp), n=2, topics = 1:6)#n=how many documents --> increasing n doesn't seem to have an effect.
-#plot thoughts for topics
-stm::plotQuote(thoughts$docs$`Topic 4`, width = 80, text.cex=0.6)
+thoughts <- findThoughts(topic_mod_1, texts = texts(HoC_corp), n=1, topics = c(1:6))#n=how many documents
+#plot thoughts for topics ---> Ofer needs help with this one!
+stm::plotQuote(thoughts$docs, width = 80, text.cex=0.6)
 save(thoughts, file = "thoughts.RData")
 
-#kwic for thoughts
-thoughts_1 <- data.frame(t(as.data.frame(thoughts$docs)))
-names(thoughts_1) <- "text"
-
-thoughts <- corpus(thoughts_1)
-thoughts_kwic <- kwic(thoughts, 
-                 paste(key_words_img,collapse="|"), 
-                 window = 20)
-
-thoughts_kwic_df <- tibble(speaker = thoughts_kwic$docname, 
-                  text = paste(thoughts_kwic$pre,
-                               thoughts_kwic$keyword,
-                               thoughts_kwic$post, sep = " "))
-
-
-# wordcloud
-cloud(topic_mod_1, topic = 6, max_words = 90, color = c(color = rev(RColorBrewer::brewer.pal(10, "RdBu"))))
+# wordcloud textplot_wordcloud
+cloud(topic_mod_1, topic = 6, max_words = 90, color = c(color =rev(RColorBrewer::brewer.pal(10, "RdBu"))))
 
 # check if topics are exclusive
 dotchart(exclusivity(topic_mod_1), labels = 1:6, color = 1:6)
 
 # check if topics are coherent
 cohere <- semanticCoherence(topic_mod_1, HoC_dfm)
+cohere
 dotchart(cohere, labels = 1:6, color = 1:6)
 
 #topic model key words in context
@@ -572,7 +564,7 @@ save(thoughts_2, file = "thoughts_2.RData")
 #plot thoughts for topics
 stm::plotQuote(thoughts_2$docs, width = 80, text.cex=0.6)
 ```
-
+The topic found by the stm model are exclusive 
 
 ```{r topics dataframe, echo=FALSE}
 ###################################
@@ -803,23 +795,6 @@ reg6 <- lm(sentiment~theta+party+date, data=sentiment_topic6)
 library(stargazer)
 #stargazer(reg1, reg2, reg3, reg4, reg5, reg6, column.labels = c(names(HoC_theta_data)[1:6]), type = "text")
 stargazer(reg1, reg2, reg3, reg4, reg5, reg6, type = "text")
-
-
-##### cor()
-
-cor_sent_top_1 <- cor(theta_data_party[1],theta_data_party$sentiment)
-cor_sent_top_2 <- cor(theta_data_party[2],theta_data_party$sentiment)
-cor_sent_top_3 <- cor(theta_data_party[3],theta_data_party$sentiment)
-cor_sent_top_4 <- cor(theta_data_party[4],theta_data_party$sentiment)
-cor_sent_top_5 <- cor(theta_data_party[5],theta_data_party$sentiment)
-cor_sent_top_6 <- cor(theta_data_party[6],theta_data_party$sentiment)
-
-cor_sent_top <- rbind(cor_sent_top_1,cor_sent_top_2,cor_sent_top_3,cor_sent_top_4,cor_sent_top_5,cor_sent_top_6)
-colnames(cor_sent_top) = "correlation"
-
-cor_top
-?cor()
-
 ```
 
 ```{r topics-sentiment regression plot, echo=FALSE}

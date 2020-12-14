@@ -503,6 +503,8 @@ Text here
 *Create Dfm* Include here to also include sentiment in the dfm.
 ```{r topics_dfm, echo=FALSE}
 
+HoC_corp <- corpus(HoC_data) # re-run here to include sentiment
+
 HoC_dfm <- dfm(HoC_corp, 
                   remove_punct = TRUE,
                   remove = stopwords(),
@@ -530,10 +532,25 @@ topic_labels <- labelTopics(topic_mod_1)
 plot(topic_mod_1, type = "labels", labeltype = "prob") # or frex, lift, score
 
 # extract paragraphs most aligned with each topic
-thoughts <- findThoughts(topic_mod_1, texts = texts(HoC_corp), n=1, topics = c(1:6))#n=how many documents
+thoughts <- findThoughts(topic_mod_1, texts = texts(HoC_corp), n=2, topics = 1:6)#n=how many documents --> increasing n doesn't seem to have an effect.
 #plot thoughts for topics
 stm::plotQuote(thoughts$docs$`Topic 4`, width = 80, text.cex=0.6)
 save(thoughts, file = "thoughts.RData")
+
+#kwic for thoughts
+thoughts_1 <- data.frame(t(as.data.frame(thoughts$docs)))
+names(thoughts_1) <- "text"
+
+thoughts <- corpus(thoughts_1)
+thoughts_kwic <- kwic(thoughts, 
+                 paste(key_words_img,collapse="|"), 
+                 window = 20)
+
+thoughts_kwic_df <- tibble(speaker = thoughts_kwic$docname, 
+                  text = paste(thoughts_kwic$pre,
+                               thoughts_kwic$keyword,
+                               thoughts_kwic$post, sep = " "))
+
 
 # wordcloud
 cloud(topic_mod_1, topic = 6, max_words = 90, color = c(color = rev(RColorBrewer::brewer.pal(10, "RdBu"))))
@@ -786,6 +803,23 @@ reg6 <- lm(sentiment~theta+party+date, data=sentiment_topic6)
 library(stargazer)
 #stargazer(reg1, reg2, reg3, reg4, reg5, reg6, column.labels = c(names(HoC_theta_data)[1:6]), type = "text")
 stargazer(reg1, reg2, reg3, reg4, reg5, reg6, type = "text")
+
+
+##### cor()
+
+cor_sent_top_1 <- cor(theta_data_party[1],theta_data_party$sentiment)
+cor_sent_top_2 <- cor(theta_data_party[2],theta_data_party$sentiment)
+cor_sent_top_3 <- cor(theta_data_party[3],theta_data_party$sentiment)
+cor_sent_top_4 <- cor(theta_data_party[4],theta_data_party$sentiment)
+cor_sent_top_5 <- cor(theta_data_party[5],theta_data_party$sentiment)
+cor_sent_top_6 <- cor(theta_data_party[6],theta_data_party$sentiment)
+
+cor_sent_top <- rbind(cor_sent_top_1,cor_sent_top_2,cor_sent_top_3,cor_sent_top_4,cor_sent_top_5,cor_sent_top_6)
+colnames(cor_sent_top) = "correlation"
+
+cor_top
+?cor()
+
 ```
 
 ```{r topics-sentiment regression plot, echo=FALSE}

@@ -549,7 +549,7 @@ HoC_dfm <- dfm_subset(HoC_dfm, rowSums(HoC_dfm)>0)
 HoC_stm <-asSTMCorpus(HoC_dfm)
 ```
 
-```{r topics, message = FALSE, warning=FALSE}
+```{r topics, message=FALSE, warning=FALSE}
 ########################
 # Running topic model 1#
 ########################
@@ -765,7 +765,7 @@ ggplot(theta_data_long_reg,aes(y=sentiment,x=theta, color = party, fill = party)
 Leave out in the end!
 
 *Descriptive*
-```{r topics_5, echo=FALSE}
+```{r topics_5, eval=FALSE, include=FALSE}
 # fit a simple model with 12 topics
 topic_mod_2 <- stm(HoC_dfm, K = 12, seed = 12345)
 labelTopics(topic_mod_2)
@@ -781,7 +781,7 @@ dotchart(cohere, labels = 1:12)
 ```
 
 
-```{r topics_6, echo=FALSE}
+```{r topics_6, eval=FALSE, include=FALSE}
 # topic model prevelance by party
 # new topic model mod3  --> @Amir check why error showss up regarding content covariate lenght? 
 
@@ -805,7 +805,7 @@ labels <- apply(sageLabels(topic_mod_1)$marginal$frex, 1,
 ```
 
 *Just to check what the sentiment analysis does*
-```{r just for us, echo=FALSE}
+```{r just for us, eval=FALSE, include=FALSE}
 
 text <- data.frame(text =c("nice","evil","and"))
 text <- corpus(text)
@@ -813,7 +813,7 @@ sent_text <- textstat_polarity(text,
                                data_dictionary_LSD2015)
 ```
 
-```{r just for us_2, echo=FALSE}
+```{r just for us_2, eval=FALSE, include=FALSE}
 
 #### Sentiment only for refugee* by party
 refu <- c("refugee*","Refugee*")
@@ -850,12 +850,12 @@ Justification and Thoughts here.
 To understand better how key words are discussed in the text we first generated a key words in context data frame which constraints the corpus to only words that appear 20 words before a key word and 20 words after. 
 
 *KWIC - Wordcloud incl. keywords*
-```{r kwic, echo=FALSE,results = 'hide'}
+```{r kwic, eval=FALSE, include=FALSE}
 textplot_wordcloud(HoC_kwic_dfm, max_words = 90, color = rev(RColorBrewer::brewer.pal(10, "RdBu")))
 ```
 
 *KWIC - Wordcloud excl. keywords*
-```{r kwic_2, echo=FALSE,results = 'hide'}
+```{r kwic_2, eval=FALSE, include=FALSE}
 
 ## removing also key words to see what is left
 HoC_kwic_dfm_no_key <- dfm(HoC_kwic_corp,
@@ -870,7 +870,7 @@ textplot_wordcloud(HoC_kwic_dfm_no_key, max_words = 90, color = rev(RColorBrewer
 ```
 
 *Plot: Top words co-concurence matrix of key words in context*
-```{r kwic_3, echo=FALSE,results = 'hide'}
+```{r kwic_3, eval=FALSE, include=FALSE}
 #plot feature concourence matrix
 HoC_kwic_fcm <-
   tokens(HoC_kwic_corp, remove_punct = TRUE) %>%
@@ -885,7 +885,7 @@ textplot_network(fcm_select(HoC_kwic_fcm, topfeats), min_freq = 0.8)
 ```
 
 *Frequency of words related to migration (including key terms)*
-```{r kwic_4, echo=FALSE}
+```{r kwic_4, eval=FALSE, include=FALSE}
 
 HoC_dfm_word_freq <- textstat_frequency(HoC_dfm, n=100)
 # Sort by reverse frequency order

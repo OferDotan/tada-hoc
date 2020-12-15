@@ -6,7 +6,7 @@ output: html_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = FALSE)
 ```
 
 ## 1. Introduction/ problem setting
@@ -36,8 +36,7 @@ explain which data has been used and forms the basis of our analysis
 
 To understand how immigrants are framed and perceived when discussed in parliamentary debates, we used a database called ParlSpeech V2 by Christian Rauh and Jan Schwalbach (2020). This database is unique in its scope, covering all parliamentary debates from 1998 and up until 2020, resulting in 1,956,223 speeches (Rauh & Schwalbach, 2020, p. 10). The text was collected from the digital Commons Hansard that contains the plenary protocols and documents from which speech texts and metadata are extracted. The corpus contains a range of covariates like party affiliation and agenda which facilitate better analysis of the various ways in which the topic of consideration is discussed by the different parties' representatives and depending on the agenda context. For that end, we also leverage the (established to produce reliable estimates) Lexicoder 2015 sentiment dictionary that consists of 2,858-word patterns relating to negative sentiment and 1,709-word patterns, indicating positive sentiment (Young & Soroka, 2012). 
 
-```{r library}
-#load packages
+```{r load packages, results = 'hide', message = FALSE, warning=FALSE, echo=FALSE, fig.show='hide'}
 library(quanteda)
 library(quanteda.textmodels)
 library(quanteda.sentiment)
@@ -56,9 +55,13 @@ library(dygraphs)
 library(xts)
 library(ggiraphExtra)
 library(car)
-#load data
+```
+
+```{r load data, results = 'hide', message = FALSE, warning=FALSE, echo=FALSE, fig.show='hide'}
+
 Corp_HouseOfCommons_V2  <- readRDS("~/Desktop/tada-hoc/Corp_HouseOfCommons_V2.rds")
 ```
+
 
 ### 2.1 Subset
 
@@ -66,74 +69,60 @@ explain the subset + limitations
 Choosing a unit for analysis is a challenging task, and in our case, the desicions we took were related both to substantive and practical consideration of needing to narrow down a very large database to perform a more in depth analysis. Thus, we choose to focus on texts from 2010 to present day. 2010 is a good starting point for our analysis because that was the year of the Tory manifesto and the general elections which resulted with a win for the Conservative party. This allow us for a sufficient time frame that has observations both before our main events of interest, namely the 2015 General Election, the migration wave and the Brexit Referendum, and after, from 2016 until 2020.
 In terms of content, we subset the corpus only to those speeches that contain a reference to key words related to the topic. Specifically, "immigra", "refugee" or "asylum" because we expect parliamentary debates to be explicit in their language, meaning that if immigration is discussed one of these key words will show either in the agenda description or in the speech itself and therefore we think this method would allow us to capture most of the substantive debates regarding immigration (Van Dijk, 2000). This type of subsetting allows us to focus our analysis and remove noise from unrelated text, and yet, contain the limitation of not including any documents who discuss immigration without mentioning the three key terms chosen in either agenda description or text. Further, by this subsetting we are very likely to loose short responses to speeches carried out. 
 
-```{r subset}
+```{r subset, results = 'hide', message = FALSE, warning=FALSE, echo=FALSE, fig.show='hide'}
 
 # select time frame 
 
 HoC_corp_time_0 <- Corp_HouseOfCommons_V2 %>% 
   select(!c(iso3country, party.facts.id, parliament)) %>%
-  filter(date>"2009-12-20")
-
-# select relevant parties?? # 12/12/2020 note to ourselves: Do we want to subset parties? at least exclude the NAs?
+  filter(date>"2009-12-31") #749177 obs.
 
 
 # select relevant content 
 
-HoC_corp_time <- HoC_corp_time_0[HoC_corp_time_0$terms>10,]
+HoC_corp_time <- HoC_corp_time_0[HoC_corp_time_0$terms>10,] #708998 obs.
 
 key_words_img <- c("immigra*","Immigra*","refugee*","Refugee*","asylum","Asylum"," migra*"," Migra*")
 HoC_data <- filter(HoC_corp_time, 
                    grepl(paste(key_words_img,collapse="|"), agenda) | 
-                     grepl(paste(key_words_img,collapse="|"), text))
+                     grepl(paste(key_words_img,collapse="|"), text)) #22909 obs.
+
+# select the 5 parties with highest contribution, covering >98% of the initial content
+
+party_contr <- HoC_data %>%
+  group_by(party) %>% 
+  summarise(contribution=(sum(terms)/sum(HoC_data$terms))*100)
+
+party_contr <- party_contr[order(party_contr$contribution, decreasing = TRUE),]
+
+parties <- party_contr$party[1:5]
+
+HoC_data <- filter(HoC_data, grepl(paste(parties,collapse="|"), party))#22257 obs.
+
 
 ```
 
 ### 2.2 Foundational Dateframes & Considerations
 
-mention that we will look at two basic subsets: One general one with all oberservations of the initial subset, and one based on the context of the keywords. Justify why. 
+mention that we will look at two basic subsets: One general one with all obrservations of the initial subset, and one based on the context of the keywords. Justify why. 
 
 mention events etc. 
 
 
 *2.2.1 General Corpus*
-```{r dataframes, echo=FALSE}
+```{r dataframes, results = 'hide', message = FALSE, warning=FALSE, echo=FALSE, fig.show='hide'}
 
 HoC_corp <- corpus(HoC_data)
 
 ```
 
-*2.2.2 KWIC - Dataframe, Corpus and Dfm*
-```{r dataframes_1, echo=FALSE}
-
-# kwic dataframe, corpus and dfm
-
-HoC_kwic <- kwic(HoC_corp, 
-                 paste(key_words_img,collapse="|"), 
-                 window = 20)
-
-HoC_kwic_data <- tibble(speaker = HoC_kwic$docname, 
-                  text = paste(HoC_kwic$pre, 
-                               HoC_kwic$post, sep = " ")) 
-
-HoC_kwic_corp <- corpus(HoC_kwic_data)
-
-HoC_kwic_dfm <- dfm(HoC_kwic_corp, 
-                remove_punct = TRUE,
-                remove = stopwords(),
-                remove_symbols = TRUE,
-                remove_separators = TRUE,
-                split_hyphens = TRUE,
-                remove_numbers = TRUE)
-```
 
 *2.2.3 General consideration/definitions used across analysis*
-```{r dataframes_3, echo=FALSE}
+```{r dataframes_3, results = 'hide', message = FALSE, warning=FALSE, echo=FALSE, fig.show='hide'}
 
 events <- data.frame(Ref = c("2015 General Election", "Brexit Referendum"),
                      vals = c("2015-05-07", "2016-06-23"),
                      stringsAsFactors = FALSE)
-
-# could also specify e.g. colors (could also not do it ;) :D ) 
 
 ```
 
@@ -158,42 +147,29 @@ Justifications and throughts here.
 
 - Findings plot 3: While sharp ups and downs were still visible in plots 1 and 2, averaging over 6 months allows for a smoother observation of debate evolution. From January 2012 to November 2014 we are able to observe a steady increase in time spend on debates with regards to their 6-month averages. This is likely due to the spikes showing on a monthly level in both January and June of 2014. The second half of 2014 as well as the first half of 2015 saw less time being devoted to immigration related debates. This suggest that overall, the content on which we selected our subset did not increase in particular prevalence before the 2015 General Election. However, Between May 2015 and June 2016, hence the year following the general election and leading up to the Brexit referendum, saw a major increase in time spend on immigration-related debates. On average, the HoC spend almost twice as much time on immigration related debates during Sep 2015 - Feb 2016 when compared to the period of Dec 2014 - May 2015. Hence, debates seem to have gained in priority after the GEneral election and leading up to the referendum. 
 
-```{r subset of all debate, echo=FALSE}
+```{r subset of all debate, results = 'hide', message = FALSE, warning=FALSE, echo=FALSE, fig.show='hide'}
 
-# subset as % of overall debates within same time frame 3.05%
+# subset as % of overall debates within same time frame 2.97%
 
 nrow(HoC_data)/nrow(HoC_corp_time_0)*100
 
-# subset as % of time spend 6.35%
+# subset as % of time spend 6.244%
 
 sum(HoC_data$terms)/sum(HoC_corp_time_0$terms)*100
 
 
-# % contribution within subset by party
-
-party_contr <- HoC_data %>%
-  group_by(party) %>% 
-  summarise(contribution=(sum(terms)/sum(HoC_data$terms))*100)
-
-party_contr[order(party_contr$contribution, decreasing = TRUE),]
-
-# time sepnd on immigration related debates during the year before Election compared to the year before Brexit
+# time spend on immigration related debates during the year before Election compared to the year before Brexit
 
 
 contr_elect <- sum(HoC_data$terms[HoC_data$date <= "2015-05-07" & HoC_data$date >= "2014-05-07"])
 
 contr_brex <- sum(HoC_data$terms[HoC_data$date <= "2016-06-23" & HoC_data$date >= "2015-06-23"])
 
-contr_brex/contr_elect # 76.3% more time spend on immigration related debates in year leading up to Brexit compared to the one leading up to election.
+contr_brex/contr_elect # 75.2% more time spend on immigration related debates in year leading up to Brexit compared to the one leading up to election.
 
 ```
-
-
-
-*Plot 1:* Prevalence of immigration debates over time by month | Counting documents
-
-```{r plot 1, echo=FALSE}
-
+```{r plot 1, results = 'hide', message = FALSE, warning=FALSE, echo=FALSE, fig.show='hide'}
+# *Plot 1:* Prevalence of immigration debates over time by month | Counting documents
 HoC_data$date <- as.Date(HoC_data$date, format="%Y-%m-%d")
 
 doc_sum_by_month = HoC_data %>% 
@@ -214,11 +190,8 @@ dygraph(descr_plot_1,
   dyEvent(x="2016-06-23", label = "Brexit Referendum", color = "red")
 
 ```
-
-*Plot 2:* Prevalence of immigration debates over time by month | Counting unique agenda points
-
-```{r plot 2, echo=FALSE}
-# plot: prevalence of immigration debates over time by month | counting unique agenda points
+```{r plot 2, results = 'hide', message = FALSE, warning=FALSE, echo=FALSE, fig.show='hide'}
+#*Plot 2:* Prevalence of immigration debates over time by month | Counting unique agenda points
 HoC_data$date <- as.Date(HoC_data$date, format="%Y-%m-%d")
 
 sum_by_agenda = HoC_data %>% 
@@ -245,7 +218,7 @@ dygraph(descr_plot_2,
 
 *Plot 3:* Prevalence of immigration debates over time by month | Total number of words as a proxy for time spent on debating. 
 
-```{r plot 3, echo=FALSE}
+```{r plot 3, echo=FALSE,  message = FALSE}
 # plot: prevalence of immigration debates over time by month | total number of words as a proxy for time spent on debating. 
 HoC_data$date <- as.Date(HoC_data$date, format="%Y-%m-%d")
 
@@ -268,15 +241,15 @@ dygraph(descr_plot_3,
   dyEvent(x="2015-05-07", label = "General Election 2015")%>%
   dyEvent(x="2016-06-23", label = "Brexit Referendum", color = "red")
 ```
+*Concentration of party-specific contributions*
 
-```{r plot 4: prevalence by party, echo=FALSE}
+```{r plot 4: prevalence by party, results = 'hide', message = FALSE, warning=FALSE, echo=FALSE }
 
 # library
 HoC_data$date <- as.Date(HoC_data$date, format="%Y-%m-%d")
 
 sum_by_party = HoC_data %>% 
-  filter(party == "Con" | party == "Lab" |  party == "LibDem" | party == "SNP" | party == "DUP") %>%
-  group_by(month=floor_date(date, "month"), party = party) %>% 
+  group_by(month=floor_date(date, "day"), party = party) %>% 
   summarise(frequency = sum(terms)) 
 
 # Plot
@@ -291,70 +264,11 @@ ggplot(sum_by_party, aes(x = month, y = party, fill = party)) +
 
 This density plot gives us a sense of the frequency each party discussed each party discussed each month during the time frame of our research. Basically what it does it counts how many words each party each party invested in speaking about immigration related topics. So for example, while the SNP and the DUP spoke more about immigration after Brexit, other parties exhibit a more constant trend of engagement with immigration related speech. Importantly, the information that can be gathered from this graph is limited in that it does not tell us anything about substance of these speeches, but crudely how many words were used. Nevertheless, this descriptive visualization does help us get an initial sense about the prevelance of immigration related speech in each of the parties we are focusing on.      
 
-
-
-## 4. Keywords in Context
-
-Justification and Thoughts here.
-To understand better how key words are discussed in the text we first generated a key words in context data frame which constraints the corpus to only words that appear 10 words before a key word and 10 words after. 
-
-*KWIC - Wordcloud incl. keywords*
-```{r kwic, echo=FALSE}
-textplot_wordcloud(HoC_kwic_dfm, max_words = 90, color = rev(RColorBrewer::brewer.pal(10, "RdBu")))
-```
-
-*KWIC - Wordcloud excl. keywords*
-```{r kwic_2, echo=FALSE}
-
-## removing also key words to see what is left
-HoC_kwic_dfm_no_key <- dfm(HoC_kwic_corp,
-                       remove_punct = TRUE,
-                       remove = c(as.vector(key_words_img),stopwords()),
-                       remove_symbols = TRUE,
-                       remove_separators = TRUE,
-                       split_hyphens = TRUE,
-                       remove_numbers = TRUE)
-
-textplot_wordcloud(HoC_kwic_dfm_no_key, max_words = 90, color = rev(RColorBrewer::brewer.pal(10, "RdBu")))
-```
-
-*Plot* Top words co-concurence matrix of key words in context
-#####I think we could probably erase this graph/put in the appendix!
-```{r}
-#plot feature concourence matrix
-HoC_kwic_fcm <-
-  tokens(HoC_kwic_corp, remove_punct = TRUE) %>%
-  tokens_tolower() %>%
-  tokens_remove(stopwords("english"), padding = FALSE) %>%
-  fcm(context = "window", window = 5, tri = FALSE)
-# choose 30 most frequency features
-topfeats <- names(topfeatures(HoC_kwic_fcm, 30))
-# select the top 30 features only, plot the network
-set.seed(100)
-textplot_network(fcm_select(HoC_kwic_fcm, topfeats), min_freq = 0.8)
-```
-
-*Frequency of words related to migration (including key terms)*
-## also this work freq graph -- either we use a word cloud or this, not both. I think word cloud gives a better sense of whats going on than this
-```{r kwic_3, echo=FALSE}
-
-HoC_dfm_word_freq <- textstat_frequency(HoC_dfm, n=100)
-# Sort by reverse frequency order
-HoC_dfm_word_freq$feature <- with(HoC_dfm_word_freq, reorder(feature, -frequency))
-
-ggplot(HoC_dfm_word_freq, 
-       aes(x = feature, y = frequency)) +
-  geom_point() + 
-  theme(axis.text.x = element_text(angle = 60, hjust = 1))
-
-```
-
-
-## 5. Sentiment
+## 4. Sentiment
 
 
 *Sentiment | Overall Corpus*
-```{r sentiment, echo=FALSE}
+```{r sentiment, results = 'hide', message = FALSE, warning=FALSE, echo=FALSE, fig.show='hide'}
 sentiment <- textstat_polarity(HoC_corp, 
                                data_dictionary_LSD2015)
 
@@ -365,7 +279,7 @@ HoC_data = cbind(HoC_data,sentiment)
 ```
 
 *Graph 1: Overall Sentiment*
-```{r sentiment graph 1, echo=FALSE}
+```{r sentiment graph 1, results = 'hide', message = FALSE, warning=FALSE, echo=FALSE, fig.show='hide'}
 
 HoC_data$date <- as.Date(HoC_data$date, format="%Y-%m-%d")
 HoC_senti_data <- data.frame(date = HoC_data$date, 
@@ -388,7 +302,7 @@ ggplot(HoC_senti_data_month, aes(x=month, y=avg_sentiment))+
 ```
 
 *Graph 2: Sentiment by party*
-```{r sentiment graph 2, echo=FALSE}
+```{r sentiment graph 2, echo=FALSE,  message = FALSE}
 
 HoC_data$date <- as.Date(HoC_data$date, format="%Y-%m-%d")
 
@@ -419,77 +333,118 @@ party_senti_plot
 
 ```
 
-From plotting sentiments toward immigration by party 
 
 
-*Sentiment | Keywords in Context*
-```{r sentiment kwic, echo=FALSE}
+## 5. Sentiment in Context
 
-kwic_sentiment <- textstat_polarity(HoC_kwic_corp, 
+*2.2.2 Create KWIC - Dataframe, Corpus and Dfm*
+```{r dataframes_1, results = 'hide', message = FALSE, warning=FALSE, echo=FALSE, fig.show='hide'}
+#rerun general corpus to include sentiment
+HoC_corp <- corpus(HoC_data)
+
+#remove weird strings - only relevant for kwic as we want to analyze sentiment by keywords.
+
+HoC_corp <- gsub("[[:punct:]]â"," ", HoC_corp) # manually retrieved by investigating unique keyword-strings 
+HoC_corp <- gsub("([œ])","", HoC_corp)
+HoC_corp <- gsub("([â])","", HoC_corp)
+
+HoC_kwic <- kwic(HoC_corp, 
+                 paste(key_words_img,collapse="|"), 
+                 window = 20,
+                 split_hyphens = TRUE)
+
+HoC_kwic_data <- tibble(speaker = HoC_kwic$docname, 
+                  text = paste(HoC_kwic$pre, 
+                               HoC_kwic$post, sep = " "),
+                  keyword = HoC_kwic$keyword,
+                  docname = HoC_kwic$docname) 
+```
+
+
+*Subset KWIC according to keywords*
+```{r sentiment kwic, results = 'hide', message = FALSE, warning=FALSE, echo=FALSE, fig.show='hide'}
+
+imm <- c("immigra*","Immigra*")
+refu <- c("refugee*","Refugee*")
+asyl <- c("asylum","Asylum")
+
+kwic_imm <- filter(HoC_kwic_data,
+                   grepl(paste(imm,collapse="|"), keyword))
+kwic_refu <- filter(HoC_kwic_data,
+                   grepl(paste(refu,collapse="|"), keyword))
+kwic_asyl <- filter(HoC_kwic_data,
+                   grepl(paste(asyl,collapse="|"), keyword))
+
+```
+
+```{r sentiment kwic 2, results = 'hide', message = FALSE, warning=FALSE, echo=FALSE, fig.show='hide'}
+# make individual corpora
+kwic_imm_corp <- corpus(kwic_imm)
+kwic_refu_corp <- corpus(kwic_refu)
+kwic_asyl_corp <- corpus(kwic_asyl)
+
+```
+
+
+
+
+*Sentiment  Keywords in Context of keyword*
+```{r sentiment kwic 3,results = 'hide', message = FALSE, warning=FALSE, echo=FALSE, fig.show='hide'}
+
+kwic_imm_senti <- textstat_polarity(kwic_imm_corp, 
+                                    data_dictionary_LSD2015)
+kwic_refu_senti <- textstat_polarity(kwic_refu_corp, 
+                                    data_dictionary_LSD2015)
+kwic_asyl_senti <- textstat_polarity(kwic_asyl_corp, 
                                     data_dictionary_LSD2015)
 
-kwic_sentiment$sent_prob <- 1/(1 + exp(-kwic_sentiment$sentiment))
 
 # add sentiments to initial data frame
-HoC_kwic <- cbind(HoC_kwic, kwic_sentiment) 
 
-## KWIC sentiment
+kwic_imm <- cbind(kwic_imm, kwic_imm_senti) 
+kwic_refu <- cbind(kwic_refu, kwic_refu_senti)
+kwic_asyl <- cbind(kwic_asyl, kwic_asyl_senti)
 
-length(unique(HoC_data$doc_id)) # for merge, check if doc_id is unique --> yes. 
+## add date and party 
+
 doc_id_date <- data.frame(date = HoC_data$date,
                           docname = HoC_data$doc_id, 
                           party = HoC_data$party) # add date column to kwic
 
-kwic_date <- merge(HoC_kwic, 
+kwic_imm_fv <- merge(kwic_imm, 
                      doc_id_date, 
                      by = "docname", 
                      all.x = TRUE, 
-                     sort = FALSE) # will need to merge based on the docname, as this is the same as the initial doc_id.
+                     sort = FALSE)
+kwic_refu_fv <- merge(kwic_refu, 
+                     doc_id_date, 
+                     by = "docname", 
+                     all.x = TRUE, 
+                     sort = FALSE)
+kwic_asyl_fv <- merge(kwic_asyl, 
+                     doc_id_date, 
+                     by = "docname", 
+                     all.x = TRUE, 
+                     sort = FALSE)
+
 ```
 
 *Graph 3: KWIC sentiment*
 #### I think this should also be discarded. It is kind of strange maybe to plot sentiment based on bubbles of 40 words at a time, or, we could justify it by assuming that in these bubbles speeches are likely to be really related to immigration which is also where most sentiment is likely to be voiced. But I am not that convinced by this myself.  
-```{r sentiment kwic graph 3, echo=FALSE}
 
-kwic_date$date <- as.Date(kwic_date$date, format="%Y-%m-%d")
+```{r kwic sentiment by party immigra, results = 'hide', message = FALSE, warning=FALSE, echo=FALSE}
 
-HoC_kwic_senti_data <- data.frame(
-  date = kwic_date$date, 
-  sentiment = kwic_date$sentiment)
+kwic_imm_fv$date <- as.Date(kwic_imm_fv$date, format="%Y-%m-%d")
 
-HoC_kwic_senti_month = HoC_kwic_senti_data %>% 
-  group_by(month=floor_date(date, "month")) %>% 
-  summarise(avg_sentiment = mean(sentiment))
-
-ggplot(HoC_kwic_senti_month, aes(x=month, y=avg_sentiment)) +
-  geom_area( fill="#69b3a2", alpha=0.4, aes(group=1)) +
-  geom_line(color="#69b3a2",aes(group=1)) +
-  labs(title = "Observed Sentiment in Context of Keywords in immigration related contributions",
-       caption = "dashed line (black = 2015 general election, red = Brexit referendum") +
-  geom_vline(xintercept = as.Date("2015-05-07"), linetype = "dashed")+ #general election 2015
-  geom_vline(xintercept = as.Date("2016-06-23"), linetype = "dashed", color = "red") + # Brexit referendum
-  theme(axis.text.x = element_text(angle = 90))
-```
-
-*Graph 4: KWIC sentiment by party*
-```{r sentiment kwic graph 4, echo=FALSE}
-
-kwic_date$date <- as.Date(kwic_date$date, format="%Y-%m-%d")
-
-HoC_kwic_senti_data_party <- data.frame(
-  date = kwic_date$date, 
-  party = kwic_date$party,
-  sentiment = kwic_date$sentiment)
-
-HoC_kwic_senti_party = HoC_kwic_senti_data_party %>% 
+kwic_imm_party <- kwic_imm_fv %>% 
   group_by(month=floor_date(date, "month"), party = party) %>% 
   summarise(avg_sentiment = mean(sentiment))
 
-kwic_senti_party_plot <- ggplot(HoC_kwic_senti_party)+
+ggplot(kwic_imm_party)+
   geom_line(aes(x=month, y=avg_sentiment,group = party), colour = "grey",size = 1) +
-  geom_line(data = subset(HoC_kwic_senti_party, party == "Con") ,aes(x=month, y=avg_sentiment,group = party), colour = "blue",size = 1) +
-  geom_line(data = subset(HoC_kwic_senti_party, party == "Lab") ,aes(x=month, y=avg_sentiment,group = party), colour = "red",size = 1) +
-  labs(title = "Observed Sentiment in in context of keyword immigration related contributions by party",
+  geom_line(data = subset(HoC_senti_data_party, party == "Con") ,aes(x=month, y=avg_sentiment,group = party), colour = "blue",size = 1) +
+  geom_line(data = subset(HoC_senti_data_party, party == "Lab") ,aes(x=month, y=avg_sentiment,group = party), colour = "red",size = 1) +
+  labs(title = "Observed Sentiment in context of immigra* by party",
        subtitle = "Conservative = blue, Labour = red",
        caption = "dashed line (black = 2015 general election, red = Brexit referendum")+
   geom_vline(xintercept = as.numeric(as.Date(events$vals)),
@@ -497,19 +452,86 @@ kwic_senti_party_plot <- ggplot(HoC_kwic_senti_party)+
              show.legend = FALSE, linetype ="dashed")+
   theme(axis.text.x = element_text(angle = 90))
 
-# turn into interactive graph
-kwic_senti_party_plot <- ggplotly(kwic_senti_party_plot)
-kwic_senti_party_plot
+```
+
+```{r kwic sentiment by party refuge, results = 'hide', message = FALSE, warning=FALSE, echo=FALSE}
+
+kwic_refu_fv$date <- as.Date(kwic_refu_fv$date, format="%Y-%m-%d")
+
+kwic_refu_party <- kwic_refu_fv %>% 
+  group_by(month=floor_date(date, "month"), party = party) %>% 
+  summarise(avg_sentiment = mean(sentiment))
+
+ggplot(kwic_refu_party)+
+  geom_line(aes(x=month, y=avg_sentiment,group = party), colour = "grey",size = 1) +
+  geom_line(data = subset(HoC_senti_data_party, party == "Con") ,aes(x=month, y=avg_sentiment,group = party), colour = "blue",size = 1) +
+  geom_line(data = subset(HoC_senti_data_party, party == "Lab") ,aes(x=month, y=avg_sentiment,group = party), colour = "red",size = 1) +
+  labs(title = "Observed Sentiment in context of refuge* by party",
+       subtitle = "Conservative = blue, Labour = red",
+       caption = "dashed line (black = 2015 general election, red = Brexit referendum")+
+  geom_vline(xintercept = as.numeric(as.Date(events$vals)),
+             colour = c("black","red"),
+             show.legend = FALSE, linetype ="dashed")+
+  theme(axis.text.x = element_text(angle = 90))
+
+```
+
+```{r kwic sentiment by party asylum, results = 'hide', message = FALSE, warning=FALSE, echo=FALSE}
+
+kwic_asyl_fv$date <- as.Date(kwic_asyl_fv$date, format="%Y-%m-%d")
+
+kwic_asyl_party <- kwic_asyl_fv %>% 
+  group_by(month=floor_date(date, "year"), party = party) %>% 
+  summarise(avg_sentiment = mean(sentiment))
+
+ggplot(kwic_asyl_party)+
+  geom_line(aes(x=month, y=avg_sentiment,group = party), colour = "grey",size = 1) +
+  geom_line(data = subset(HoC_senti_data_party, party == "Con") ,aes(x=month, y=avg_sentiment,group = party), colour = "blue",size = 1) +
+  geom_line(data = subset(HoC_senti_data_party, party == "Lab") ,aes(x=month, y=avg_sentiment,group = party), colour = "red",size = 1) +
+  labs(title = "Observed Sentiment in context of asylum by party",
+       subtitle = "Conservative = blue, Labour = red",
+       caption = "dashed line (black = 2015 general election, red = Brexit referendum")+
+  geom_vline(xintercept = as.numeric(as.Date(events$vals)),
+             colour = c("black","red"),
+             show.legend = FALSE, linetype ="dashed")+
+  theme(axis.text.x = element_text(angle = 90))
+
+```
+
+```{r sentiment kwic graph 3, results = 'hide', message = FALSE, warning=FALSE, echo=FALSE}
+
+kwic_senti <- data.frame(kwic_imm_fv %>% 
+  group_by(month=floor_date(date, "year")) %>% 
+  summarise(avg_sentiment = mean(sentiment)),
+kwic_refu_party <- kwic_refu_fv %>% 
+  group_by(month=floor_date(date, "year")) %>% 
+  summarise(avg_sentiment = mean(sentiment)),
+kwic_refu_party <- kwic_asyl_fv %>% 
+  group_by(month=floor_date(date, "year")) %>% 
+  summarise(avg_sentiment = mean(sentiment)))
+
+kwic_senti <- data.frame(date = kwic_senti$month, immigra = kwic_senti$avg_sentiment, refuge = kwic_senti$avg_sentiment.1 ,asylum = kwic_senti$avg_sentiment.2)
+
+kwic_senti$date <- as.Date(kwic_senti$date, format="%Y-%m-%d")
+
+ggplot(kwic_senti, aes(x=date)) +
+  geom_line(color="red",aes(y=immigra)) +
+  geom_line(color="green",aes(y=refuge)) +
+  geom_line(color="black",aes(y=asylum)) +
+  labs(title = "Observed Sentiment in Context of Keywords",
+       subtitle = "red = immigra*, green = refuge*, black = asylum",
+       caption = "dashed line (black = 2015 general election, red = Brexit referendum") +
+  geom_vline(xintercept = as.Date("2015-05-07"), linetype = "dashed")+ #general election 2015
+  geom_vline(xintercept = as.Date("2016-06-23"), linetype = "dashed", color = "red") + # Brexit referendum
+  theme(axis.text.x = element_text(angle = 90))
 
 ```
 
 
 ## 6. Topics
 
-Text here
-
 *Create Dfm* Include here to also include sentiment in the dfm.
-```{r topics_dfm, echo=FALSE}
+```{r topics_dfm, message = FALSE, warning=FALSE}
 
 HoC_dfm <- dfm(HoC_corp, 
                   remove_punct = TRUE,
@@ -527,8 +549,7 @@ HoC_dfm <- dfm_subset(HoC_dfm, rowSums(HoC_dfm)>0)
 HoC_stm <-asSTMCorpus(HoC_dfm)
 ```
 
-
-```{r topics, echo=FALSE}
+```{r topics, message = FALSE, warning=FALSE}
 ########################
 # Running topic model 1#
 ########################
@@ -538,13 +559,13 @@ topic_labels <- labelTopics(topic_mod_1)
 plot(topic_mod_1, type = "labels", labeltype = "prob") # or frex, lift, score
 
 # extract paragraphs most aligned with each topic
-thoughts <- findThoughts(topic_mod_1, texts = texts(HoC_corp), n=1, topics = c(1:6))#n=how many documents
+# thoughts <- findThoughts(topic_mod_1, texts = texts(HoC_corp), n=1, topics = c(1:6))#n=how many documents
 #plot thoughts for topics ---> Ofer needs help with this one!
-stm::plotQuote(thoughts$docs, width = 80, text.cex=0.6)
-save(thoughts, file = "thoughts.RData")
+# stm::plotQuote(thoughts$docs, width = 80, text.cex=0.6)
+# save(thoughts, file = "thoughts.RData")
 
 # wordcloud textplot_wordcloud
-cloud(topic_mod_1, topic = 6, max_words = 90, color = c(color =rev(RColorBrewer::brewer.pal(10, "RdBu"))))
+# cloud(topic_mod_1, topic = 6, max_words = 90, color = c(color =rev(RColorBrewer::brewer.pal(10, "RdBu"))))
 
 # check if topics are exclusive
 dotchart(exclusivity(topic_mod_1), labels = 1:6, color = 1:6)
@@ -555,18 +576,19 @@ cohere
 dotchart(cohere, labels = 1:6, color = 1:6)
 
 #topic model key words in context
-topic_mod_2 <- stm(HoC_kwic_dfm, K = 6, seed = 12345)
-topic_labels_2 <- labelTopics(topic_mod_2)
-plot(topic_mod_2, type = "labels", labeltype = "prob") 
+#topic_mod_2 <- stm(HoC_kwic_dfm, K = 6, seed = 12345)
+#topic_labels_2 <- labelTopics(topic_mod_2)
+#plot(topic_mod_2, type = "labels", labeltype = "prob") 
 # extract paragraphs most aligned with each topic
-thoughts_2 <- findThoughts(topic_mod_2, texts = texts(HoC_kwic_corp), n=1, topics = c(1:6)) #n=how many documents
-save(thoughts_2, file = "thoughts_2.RData")
+#thoughts_2 <- findThoughts(topic_mod_2, texts = texts(HoC_kwic_corp), n=1, topics = c(1:6)) #n=how many documents
+#save(thoughts_2, file = "thoughts_2.RData")
 #plot thoughts for topics
-stm::plotQuote(thoughts_2$docs, width = 80, text.cex=0.6)
+#stm::plotQuote(thoughts_2$docs, width = 80, text.cex=0.6)
 ```
-The topic found by the stm model are exclusive 
 
-```{r topics dataframe, echo=FALSE}
+The topics found by the stm model are exclusive 
+
+```{r topics dataframe, message = FALSE, warning=FALSE}
 ###################################
 # Creating topic model data frame #
 ###################################
@@ -601,15 +623,14 @@ load("HoC_theta_data.RData")
 ```
 
 
-Topic Visualizations:
+*Topic Visualizations:*
 
-```{r topic_by_party_plot, echo=FALSE}
+```{r topic_by_party_plot, message = FALSE, warning=FALSE}
 
 ## topic_by_party_plot: topic proportions by party 
 
 # grouping by party and generating means 
 theta_data_party <- HoC_theta_data %>%
-  filter(party == "Con" | party == "Lab" |  party == "LibDem" | party == "SNP" | party == "DUP") %>%
   group_by(party)
 
 theta_data_party_mean <- aggregate(theta_data_party[, 1:6], 
@@ -641,7 +662,7 @@ topic_by_party_plot
 ```
 
 
-```{r topics_by_time_plot, echo=FALSE}
+```{r topics_by_time_plot, message = FALSE, warning=FALSE}
 
 ## topic_by_party_plot: topic proportions by party 
 
@@ -666,15 +687,14 @@ ggplot(theta_long_data_year,aes(x=year, y=theta.means, group = 1, color = topic)
   facet_wrap(~topic)
 ```
 
-```{r ind_topics_by_time_by_party_plot, echo=FALSE}
+```{r ind_topics_by_time_by_party_plot, message = FALSE, warning=FALSE}
 
 ####### showing development of 1 topic over time across parties
 # plot topic theta means by party over years
 theta_long_data_year_1 <- theta_data_long %>%
   mutate(year = str_sub(date, 1, 4)) %>%
   group_by(year, topic, party) %>% 
-  dplyr::summarise(theta.means = mean(theta)) %>%
-  filter(party == "Con" | party == "Lab" |  party == "LibDem" | party == "SNP" | party == "DUP")
+  dplyr::summarise(theta.means = mean(theta))
 
 # plot all parties together (plot by topic, color by party)
 k <- ggplot()  +
@@ -690,111 +710,23 @@ k <- ggplotly(k)
 k
 ```
 
-```{r topics_4 Amir: I don't think we need these anymore, echo=FALSE}
+*sentiment and Topics: Correlation*
+```{r topics-sentiment correlation,message = FALSE, warning=FALSE}
 
-# graph sentiment by topics
-sentiment_data_long <- theta_data_long %>%
-  mutate(year = str_sub(date, 1, 4)) %>%
-  group_by(year, topic, party) %>% 
-  summarise(sentiment.means = mean(sentiment)) %>%
-  filter(party == "Con" | party == "Lab" | party == "GPEW" | party == "Independent" | party == "LibDem" | party == "PlaidCymru" | party == "SDLP" | party == "SNP")
+##### cor()
+cor_sent_top_1 <- cor(theta_data_party[1],theta_data_party$sentiment)
+cor_sent_top_2 <- cor(theta_data_party[2],theta_data_party$sentiment)
+cor_sent_top_3 <- cor(theta_data_party[3],theta_data_party$sentiment)
+cor_sent_top_4 <- cor(theta_data_party[4],theta_data_party$sentiment)
+cor_sent_top_5 <- cor(theta_data_party[5],theta_data_party$sentiment)
+cor_sent_top_6 <- cor(theta_data_party[6],theta_data_party$sentiment)
+cor_sent_top <- rbind(cor_sent_top_1,cor_sent_top_2,cor_sent_top_3,cor_sent_top_4,cor_sent_top_5,cor_sent_top_6)
+colnames(cor_sent_top) = "correlation"
+cor_top
 
-sentiment_long_party <- cbind(sentiment_data_long, theta.means = theta_long_data_year_1$theta.means)
+#library(stargazer)
+#stargazer(reg1, reg2, reg3, reg4, reg5, reg6)
 
-sentiment_long_party$year <- as.Date(sentiment_long_party$year, format = "%Y")
-
-ggplot(sentiment_long_party)+
-  geom_line(aes(x = year, y=sentiment.means, group=party), colour = "grey") +
-  geom_line(data = subset(sentiment_long_party, party == "Con"), aes(x = year, y=sentiment.means, group=party), colour = "blue") +
-  geom_line(data = subset(sentiment_long_party, party == "Lab"), aes(x = year, y=sentiment.means, group=party), colour = "red") +
-  labs(title = "Observed Sentiment by partyand topic",
-       caption = "dashed line (black = 2015 general election, red = Brexit referendum")+
-  geom_vline(xintercept = as.Date("2015-05-07"), linetype = "dashed")+ #general election 2015
-  geom_vline(xintercept = as.Date("2016-06-23"), linetype = "dashed", color = "red")+ # Brexit referendum
-  facet_wrap(~topic)
-
-
-# Topic prevalence and observed Sentiment by party for Conservatives and Labour. 
-ggplot(subset(sentiment_long_party, party == c("Con","Lab")))+
-  geom_line(aes(x = year, y=theta.means, color = topic)) +
-  geom_line(data = subset(sentiment_long_party, party == c("Con","Lab")), aes(x = year, y=sentiment.means), linetype="dashed", colour = "darkgrey") +
-  labs(title = "Topic prevalence and observed Sentiment by party",
-       caption = "dashed line (black = 2015 general election, red = Brexit referendum")+
-  geom_vline(xintercept = as.Date("2015-05-07"), linetype = "dashed")+ #general election 2015
-  geom_vline(xintercept = as.Date("2016-06-23"), linetype = "dashed", color = "red")+ # Brexit referendum
-  facet_wrap(~party)
-
-
-
-# Topic prevalence and observed Sentiment by party for Conservatives and Labour. 
-ggplot(subset(sentiment_long_party, party == c("Con","Lab", "GPEW", "Independent", "LibDem", "PlaidCymru", "SDLP", "SNP")))+
-  geom_line(aes(x = year, y=theta.means, color = topic)) +
-  geom_line(data = subset(sentiment_long_party, party == c("Con","Lab", "GPEW", "Independent", "LibDem", "PlaidCymru", "SDLP", "SNP")), aes(x = year, y=sentiment.means), linetype="dashed", colour = "darkgrey") +
-  labs(title = "Topic prevalence and observed Sentiment by party",
-       caption = "dashed line (black = 2015 general election, red = Brexit referendum")+
-  geom_vline(xintercept = as.Date("2015-05-07"), linetype = "dashed")+ #general election 2015
-  geom_vline(xintercept = as.Date("2016-06-23"), linetype = "dashed", color = "red")+ # Brexit referendum
-  facet_wrap(~party)
-
-
-```
-
-```{r topics-sentiment regression, echo=FALSE}
-# filter sentiment data frame
-
-theta_data_long_reg <- theta_data_long %>%
-  filter(party == "Con" | party == "Lab" |  party == "LibDem" | party == "SNP" | party == "DUP")
-
-
-#subset data to just one topic (1)
-sentiment_topic1 <- theta_data_long_reg %>%
-  filter(topic == names(HoC_theta_data)[1])
-
-#subset data to just one topic (2)
-sentiment_topic2 <- theta_data_long_reg %>%
-  filter(topic == names(HoC_theta_data)[2])
-
-#subset data to just one topic (3)
-sentiment_topic3 <- theta_data_long_reg %>%
-  filter(topic == names(HoC_theta_data)[3])
-
-#subset data to just one topic (4)
-sentiment_topic4 <- theta_data_long_reg %>%
-  filter(topic == names(HoC_theta_data)[4])
-
-#subset data to just one topic (5)
-sentiment_topic5 <- theta_data_long_reg %>%
-  filter(topic == names(HoC_theta_data)[5])
-
-#subset data to just one topic (6)
-sentiment_topic6 <- theta_data_long_reg %>%
-  filter(topic == names(HoC_theta_data)[6])
-
-#### regression models for each topic (effect of topic on sentiment, controlling for party and year)
-
-# disagregated by topic
-
-# names(HoC_theta_data)[1]
-reg1 <- lm(sentiment~theta+party+date, data=sentiment_topic1)
-
-# names(HoC_theta_data)[2]
-reg2 <- lm(sentiment~theta+party+date, data=sentiment_topic2)
-
-# names(HoC_theta_data)[3]
-reg3 <- lm(sentiment~theta+party+date, data=sentiment_topic3)
-
-# names(HoC_theta_data)[4]
-reg4 <- lm(sentiment~theta+party+date, data=sentiment_topic4)
-
-# names(HoC_theta_data)[5]
-reg5 <- lm(sentiment~theta+party+date, data=sentiment_topic5)
-
-# names(HoC_theta_data)[6]
-reg6 <- lm(sentiment~theta+party+date, data=sentiment_topic6)
-
-library(stargazer)
-#stargazer(reg1, reg2, reg3, reg4, reg5, reg6, column.labels = c(names(HoC_theta_data)[1:6]), type = "text")
-stargazer(reg1, reg2, reg3, reg4, reg5, reg6, type = "text")
 ```
 
 ```{r topics-sentiment regression plot, echo=FALSE}
@@ -822,10 +754,17 @@ ggplot(theta_data_long_reg,aes(y=sentiment,x=theta, color = party, fill = party)
 ```
 
 
+
+
+
+
+
+
+
 ## 7. Exploratory part (just for ourselves)
 Leave out in the end!
 
-
+*Descriptive*
 ```{r topics_5, echo=FALSE}
 # fit a simple model with 12 topics
 topic_mod_2 <- stm(HoC_dfm, K = 12, seed = 12345)
@@ -865,22 +804,16 @@ labels <- apply(sageLabels(topic_mod_1)$marginal$frex, 1,
 
 ```
 
+*Just to check what the sentiment analysis does*
 ```{r just for us, echo=FALSE}
-
-# some examples of agendas
-head(unique(Corp_HouseOfCommons_V2$agenda))
-#number of agendas
-length(unique(Corp_HouseOfCommons_V2$agenda))
-length(Corp_HouseOfCommons_V2$agenda)
-Corp_HouseOfCommons_V2$agenda["migration"]
-
-## just to check what the sentiment analysis does: 
 
 text <- data.frame(text =c("nice","evil","and"))
 text <- corpus(text)
 sent_text <- textstat_polarity(text, 
                                data_dictionary_LSD2015)
+```
 
+```{r just for us_2, echo=FALSE}
 
 #### Sentiment only for refugee* by party
 refu <- c("refugee*","Refugee*")
@@ -908,6 +841,60 @@ ggplot(ref_party)+
   geom_vline(xintercept = as.Date("2016-06-23"), linetype = "dashed", color = "red")+ # Brexit referendum
   theme(axis.text.x = element_text(angle = 90))
 
+
+```
+
+
+## Keywords in Context - Wordclouds
+Justification and Thoughts here.
+To understand better how key words are discussed in the text we first generated a key words in context data frame which constraints the corpus to only words that appear 20 words before a key word and 20 words after. 
+
+*KWIC - Wordcloud incl. keywords*
+```{r kwic, echo=FALSE,results = 'hide'}
+textplot_wordcloud(HoC_kwic_dfm, max_words = 90, color = rev(RColorBrewer::brewer.pal(10, "RdBu")))
+```
+
+*KWIC - Wordcloud excl. keywords*
+```{r kwic_2, echo=FALSE,results = 'hide'}
+
+## removing also key words to see what is left
+HoC_kwic_dfm_no_key <- dfm(HoC_kwic_corp,
+                       remove_punct = TRUE,
+                       remove = c(as.vector(key_words_img),stopwords()),
+                       remove_symbols = TRUE,
+                       remove_separators = TRUE,
+                       split_hyphens = TRUE,
+                       remove_numbers = TRUE)
+
+textplot_wordcloud(HoC_kwic_dfm_no_key, max_words = 90, color = rev(RColorBrewer::brewer.pal(10, "RdBu")))
+```
+
+*Plot: Top words co-concurence matrix of key words in context*
+```{r kwic_3, echo=FALSE,results = 'hide'}
+#plot feature concourence matrix
+HoC_kwic_fcm <-
+  tokens(HoC_kwic_corp, remove_punct = TRUE) %>%
+  tokens_tolower() %>%
+  tokens_remove(stopwords("english"), padding = FALSE) %>%
+  fcm(context = "window", window = 5, tri = FALSE)
+# choose 30 most frequency features
+topfeats <- names(topfeatures(HoC_kwic_fcm, 30))
+# select the top 30 features only, plot the network
+set.seed(100)
+textplot_network(fcm_select(HoC_kwic_fcm, topfeats), min_freq = 0.8)
+```
+
+*Frequency of words related to migration (including key terms)*
+```{r kwic_4, echo=FALSE}
+
+HoC_dfm_word_freq <- textstat_frequency(HoC_dfm, n=100)
+# Sort by reverse frequency order
+HoC_dfm_word_freq$feature <- with(HoC_dfm_word_freq, reorder(feature, -frequency))
+
+ggplot(HoC_dfm_word_freq, 
+       aes(x = feature, y = frequency)) +
+  geom_point() + 
+  theme(axis.text.x = element_text(angle = 60, hjust = 1))
 
 ```
 

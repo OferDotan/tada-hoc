@@ -659,8 +659,85 @@ topic_by_party_plot <- party_prop_long %>%
                                    hjust = 1, 
                                    size = 6))
 topic_by_party_plot
+
 ```
 
+```{r topic_by_party_plot_incl periods, message = FALSE, warning=FALSE}
+
+## topic_by_party_plot: topic proportions by party 
+
+# grouping by party and generating means 
+theta_data_party <- HoC_theta_data %>%
+  group_by(party,date)
+
+
+theta_data_party_mean <- aggregate(theta_data_party[, 1:6], 
+                                   list(theta_data_party$party,theta_data_party$date ), 
+                                   mean)
+names(theta_data_party_mean)[1:2] <- c("party","date") 
+
+# Turning into a table of proportions
+theta_data_party_prop <- theta_data_party_mean[1:2] %>%
+  cbind(as.data.frame(
+    round(100*prop.table(theta_data_party_mean[3:8]),
+          digits=2)))
+
+# pivoting df for making figure
+party_prop_long <-theta_data_party_prop %>%
+  pivot_longer(c(3:8), 
+               names_to = "Topic", 
+               values_to = "Proportion")
+
+View(theta_data_party_prop)
+# visualizing proportions of topics by party
+
+party_prop_long %>%
+  ggplot(aes(party, Proportion, fill = Topic)) +
+  geom_bar(position = "fill", stat = "identity") +
+  scale_y_continuous() + 
+  theme(axis.text.x = element_text(angle = 45, 
+                                   hjust = 1,
+                                   size = 6))
+
+
+prop_pre_elec <- subset(party_prop_long, date <= as.Date("2015-05-07") & date >= as.Date("2014-05-07"))
+prop_pre_brex <- subset(party_prop_long, date <= as.Date("2016-06-23") & date >= as.Date("2015-06-23"))
+prop_post_brex <- subset(party_prop_long, date <= as.Date("2017-06-23") & date >= as.Date("2016-06-23"))
+
+prop_pre_elec %>%
+  ggplot(aes(party, Proportion, fill = Topic)) +
+  geom_bar(position = "fill", stat = "identity") +
+  scale_y_continuous() + 
+  theme(axis.text.x = element_text(angle = 45, 
+                                   hjust = 1,
+                                   size = 6))+
+  labs(title = "Topic prevalence by party",
+       subtitle = "pre election period 05.2014 - 05.2015")
+  
+  
+prop_pre_brex %>%
+  ggplot(aes(party, Proportion, fill = Topic)) +
+  geom_bar(position = "fill", stat = "identity") +
+  scale_y_continuous() + 
+  theme(axis.text.x = element_text(angle = 45, 
+                                   hjust = 1,
+                                   size = 6))+
+  labs(title = "Topic prevalence by party",
+       subtitle = "pre brexit period 06.2015 - 06.2016")    
+
+prop_post_brex %>%
+  ggplot(aes(party, Proportion, fill = Topic)) +
+  geom_bar(position = "fill", stat = "identity") +
+  scale_y_continuous() + 
+  theme(axis.text.x = element_text(angle = 45, 
+                                   hjust = 1,
+                                   size = 6))+
+  labs(title = "Topic prevalence by party",
+       subtitle = "post brexit period 06.2016 - 06.2017")   
+                        
+
+
+```
 
 ```{r topics_by_time_plot, message = FALSE, warning=FALSE}
 
@@ -722,7 +799,7 @@ cor_sent_top_5 <- cor(theta_data_party[5],theta_data_party$sentiment)
 cor_sent_top_6 <- cor(theta_data_party[6],theta_data_party$sentiment)
 cor_sent_top <- rbind(cor_sent_top_1,cor_sent_top_2,cor_sent_top_3,cor_sent_top_4,cor_sent_top_5,cor_sent_top_6)
 colnames(cor_sent_top) = "correlation"
-cor_top
+cor_sent_top
 
 #library(stargazer)
 #stargazer(reg1, reg2, reg3, reg4, reg5, reg6)

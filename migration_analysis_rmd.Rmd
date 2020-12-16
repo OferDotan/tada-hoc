@@ -620,8 +620,11 @@ names(HoC_theta_data)[1:6] <- labels_topic_mod_1
 ####################################
 
 # save and load topic model dataframe
-save(HoC_theta_data, file = "HoC_theta_data.RData")
-load("HoC_theta_data.RData")
+save(HoC_theta_data, file = "HoC_theta_data_6_topics_new_no_kwic.RData")
+topic_6_first <- load("HoC_theta_data.RData")
+topic_12_new <- load("HoC_theta_data_6_topics_new.RData")
+topic_6_new_no_kwic <- load("HoC_theta_data_6_topics_new_no_kwic.RData")
+
 ```
 
 *Topic Visualizations:*

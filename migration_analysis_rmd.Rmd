@@ -370,6 +370,7 @@ asyl <- c("asylum","Asylum")
 
 kwic_imm <- filter(HoC_kwic_data,
                    grepl(paste(imm,collapse="|"), keyword))
+
 kwic_refu <- filter(HoC_kwic_data,
                    grepl(paste(refu,collapse="|"), keyword))
 kwic_asyl <- filter(HoC_kwic_data,
@@ -382,6 +383,8 @@ kwic_asyl <- filter(HoC_kwic_data,
 kwic_imm_corp <- corpus(kwic_imm)
 kwic_refu_corp <- corpus(kwic_refu)
 kwic_asyl_corp <- corpus(kwic_asyl)
+
+
 
 ```
 
@@ -801,14 +804,70 @@ cor_sent_top <- rbind(cor_sent_top_1,cor_sent_top_2,cor_sent_top_3,cor_sent_top_
 colnames(cor_sent_top) = "correlation"
 cor_sent_top
 
-#library(stargazer)
-#stargazer(reg1, reg2, reg3, reg4, reg5, reg6)
+
 
 ```
 
+```{r}
+
+#### regression models for each topic (effect of topic on sentiment, controlling for party and year)
+og_reg <- lm(sentiment~theta+date+party, data=theta_data_long_reg)
+summary(og_reg)
+# disagregated by topic
+names(HoC_theta_data)[1]
+# names(HoC_theta_data)[1]
+reg1 <- lm(sentiment~theta+party+date, data=sentiment_topic1)
+summary(reg1)
+names(HoC_theta_data)[2]
+# names(HoC_theta_data)[2]
+reg2 <- lm(sentiment~theta+party+date, data=sentiment_topic2)
+summary(reg2)
+names(HoC_theta_data)[3]
+# names(HoC_theta_data)[3]
+reg3 <- lm(sentiment~theta+party+date, data=sentiment_topic3)
+summary(reg3)
+names(HoC_theta_data)[4]
+# names(HoC_theta_data)[4]
+reg4 <- lm(sentiment~theta+party+date, data=sentiment_topic4)
+summary(reg4)
+names(HoC_theta_data)[5]
+# names(HoC_theta_data)[5]
+reg5 <- lm(sentiment~theta+party+date, data=sentiment_topic5)
+summary(reg5)
+names(HoC_theta_data)[6]
+# names(HoC_theta_data)[6]
+reg6 <- lm(sentiment~theta+party+date, data=sentiment_topic6)
+summary(reg6)
+
+
+library(stargazer)
+#stargazer(reg1, reg2, reg3, reg4, reg5, reg6, column.labels = c(names(HoC_theta_data)[1:6]), type = "text")
+stargazer(reg1, reg2, reg3, reg4, reg5, reg6, type = "text")
+```
+
 ```{r topics-sentiment regression plot, echo=FALSE}
+# think on how best to plot these...
+# this is supposed to work for plotting multivariate regression but it doesn't work
+ggPredict(fit,se=TRUE,interactive=FALSE)
+# this is also supposed to work but I didn't get it to... not sure about the function, the line is contant for all topics :(
+equation1=function(x){coef(reg_0)[2]*x+coef(reg_0)[1]+coef(reg_0)[3]}
+ggplot(theta_data_long_reg,aes(y=sentiment,x=theta,color=topic))+geom_point()+
+  stat_function(fun=equation1,geom="line",color=scales::hue_pal()(2)[1])+
+  facet_wrap(~topic)
+
+# for all parties (color)
+ggplot(theta_data_long_reg,aes(y=sentiment,x=theta, color = party, fill = party)) +
+  #geom_point() +
+  geom_smooth(method="lm") +
+  theme_bw() + 
+  xlab("Topic Theta") +
+  ylab("Sentiment") +
+  ggtitle("Correlation Between Sentiment and Topic") +
+  facet_wrap(~topic)
+# for all parties (no color) but want to control for party and year! (seems geom_smooth does not allow multivariate regression formulas)
 # for all parties (no color)
 ggplot(theta_data_long_reg,aes(y=sentiment,x=theta)) +
+  #geom_point() +
   #geom_point(alpha = 0.05, shape = ".") +
   geom_smooth(method="lm", show.legend = FALSE) +
   theme_bw() + 
@@ -818,7 +877,7 @@ ggplot(theta_data_long_reg,aes(y=sentiment,x=theta)) +
   facet_wrap(~topic)
 ```
 
-```{r topics-sentiment regression plot by party, echo=FALSE}
+```{r}
 # for all parties (color)
 ggplot(theta_data_long_reg,aes(y=sentiment,x=theta, color = party, fill = party)) +
   #geom_point(alpha = 0.05, shape = ".") +
@@ -827,11 +886,9 @@ ggplot(theta_data_long_reg,aes(y=sentiment,x=theta, color = party, fill = party)
   xlab("Topic Theta") +
   ylab("Sentiment") +
   ggtitle("Correlation Between Sentiment and Topic") +
-  facet_wrap(~topic)
+  facet_wrap(~party)
+facet_wrap(~topic)
 ```
-
-
-
 
 
 

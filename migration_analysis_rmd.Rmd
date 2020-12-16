@@ -384,12 +384,7 @@ kwic_imm_corp <- corpus(kwic_imm)
 kwic_refu_corp <- corpus(kwic_refu)
 kwic_asyl_corp <- corpus(kwic_asyl)
 
-
-
 ```
-
-
-
 
 *Sentiment  Keywords in Context of keyword*
 ```{r sentiment kwic 3,results = 'hide', message = FALSE, warning=FALSE, echo=FALSE, fig.show='hide'}
@@ -430,6 +425,10 @@ kwic_asyl_fv <- merge(kwic_asyl,
                      all.x = TRUE, 
                      sort = FALSE)
 
+```
+```{r}
+library(tidytext)
+?tf-idf
 ```
 
 *Graph 3: KWIC sentiment*
@@ -625,7 +624,6 @@ save(HoC_theta_data, file = "HoC_theta_data.RData")
 load("HoC_theta_data.RData")
 ```
 
-
 *Topic Visualizations:*
 
 ```{r topic_by_party_plot, message = FALSE, warning=FALSE}
@@ -666,7 +664,6 @@ topic_by_party_plot
 ```
 
 ```{r topic_by_party_plot_incl periods, message = FALSE, warning=FALSE}
-
 ## topic_by_party_plot: topic proportions by party 
 
 # grouping by party and generating means 
@@ -692,8 +689,8 @@ party_prop_long <-theta_data_party_prop %>%
                values_to = "Proportion")
 
 View(theta_data_party_prop)
-# visualizing proportions of topics by party
 
+# visualizing proportions of topics by party
 party_prop_long %>%
   ggplot(aes(party, Proportion, fill = Topic)) +
   geom_bar(position = "fill", stat = "identity") +
@@ -702,7 +699,7 @@ party_prop_long %>%
                                    hjust = 1,
                                    size = 6))
 
-
+#subset main events
 prop_pre_elec <- subset(party_prop_long, date <= as.Date("2015-05-07") & date >= as.Date("2014-05-07"))
 prop_pre_brex <- subset(party_prop_long, date <= as.Date("2016-06-23") & date >= as.Date("2015-06-23"))
 prop_post_brex <- subset(party_prop_long, date <= as.Date("2017-06-23") & date >= as.Date("2016-06-23"))
@@ -737,8 +734,6 @@ prop_post_brex %>%
                                    size = 6))+
   labs(title = "Topic prevalence by party",
        subtitle = "post brexit period 06.2016 - 06.2017")   
-                        
-
 
 ```
 
@@ -768,8 +763,7 @@ ggplot(theta_long_data_year,aes(x=year, y=theta.means, group = 1, color = topic)
 ```
 
 ```{r ind_topics_by_time_by_party_plot, message = FALSE, warning=FALSE}
-
-####### showing development of 1 topic over time across parties
+# topic one evolution over time by party
 # plot topic theta means by party over years
 theta_long_data_year_1 <- theta_data_long %>%
   mutate(year = str_sub(date, 1, 4)) %>%
@@ -792,7 +786,6 @@ k
 
 *sentiment and Topics: Correlation*
 ```{r topics-sentiment correlation,message = FALSE, warning=FALSE}
-
 ##### cor()
 cor_sent_top_1 <- cor(theta_data_party[1],theta_data_party$sentiment)
 cor_sent_top_2 <- cor(theta_data_party[2],theta_data_party$sentiment)
@@ -801,146 +794,37 @@ cor_sent_top_4 <- cor(theta_data_party[4],theta_data_party$sentiment)
 cor_sent_top_5 <- cor(theta_data_party[5],theta_data_party$sentiment)
 cor_sent_top_6 <- cor(theta_data_party[6],theta_data_party$sentiment)
 cor_sent_top <- rbind(cor_sent_top_1,cor_sent_top_2,cor_sent_top_3,cor_sent_top_4,cor_sent_top_5,cor_sent_top_6)
-colnames(cor_sent_top) = "correlation"
-cor_sent_top
-
-
-
-```
-
-```{r}
-
-#### regression models for each topic (effect of topic on sentiment, controlling for party and year)
-og_reg <- lm(sentiment~theta+date+party, data=theta_data_long_reg)
-summary(og_reg)
-# disagregated by topic
-names(HoC_theta_data)[1]
-# names(HoC_theta_data)[1]
-reg1 <- lm(sentiment~theta+party+date, data=sentiment_topic1)
-summary(reg1)
-names(HoC_theta_data)[2]
-# names(HoC_theta_data)[2]
-reg2 <- lm(sentiment~theta+party+date, data=sentiment_topic2)
-summary(reg2)
-names(HoC_theta_data)[3]
-# names(HoC_theta_data)[3]
-reg3 <- lm(sentiment~theta+party+date, data=sentiment_topic3)
-summary(reg3)
-names(HoC_theta_data)[4]
-# names(HoC_theta_data)[4]
-reg4 <- lm(sentiment~theta+party+date, data=sentiment_topic4)
-summary(reg4)
-names(HoC_theta_data)[5]
-# names(HoC_theta_data)[5]
-reg5 <- lm(sentiment~theta+party+date, data=sentiment_topic5)
-summary(reg5)
-names(HoC_theta_data)[6]
-# names(HoC_theta_data)[6]
-reg6 <- lm(sentiment~theta+party+date, data=sentiment_topic6)
-summary(reg6)
-
-
-library(stargazer)
-#stargazer(reg1, reg2, reg3, reg4, reg5, reg6, column.labels = c(names(HoC_theta_data)[1:6]), type = "text")
-stargazer(reg1, reg2, reg3, reg4, reg5, reg6, type = "text")
-```
-
-```{r topics-sentiment regression plot, echo=FALSE}
-# think on how best to plot these...
-# this is supposed to work for plotting multivariate regression but it doesn't work
-ggPredict(fit,se=TRUE,interactive=FALSE)
-# this is also supposed to work but I didn't get it to... not sure about the function, the line is contant for all topics :(
-equation1=function(x){coef(reg_0)[2]*x+coef(reg_0)[1]+coef(reg_0)[3]}
-ggplot(theta_data_long_reg,aes(y=sentiment,x=theta,color=topic))+geom_point()+
-  stat_function(fun=equation1,geom="line",color=scales::hue_pal()(2)[1])+
-  facet_wrap(~topic)
-
-# for all parties (color)
-ggplot(theta_data_long_reg,aes(y=sentiment,x=theta, color = party, fill = party)) +
-  #geom_point() +
-  geom_smooth(method="lm") +
-  theme_bw() + 
-  xlab("Topic Theta") +
-  ylab("Sentiment") +
-  ggtitle("Correlation Between Sentiment and Topic") +
-  facet_wrap(~topic)
-# for all parties (no color) but want to control for party and year! (seems geom_smooth does not allow multivariate regression formulas)
-# for all parties (no color)
-ggplot(theta_data_long_reg,aes(y=sentiment,x=theta)) +
-  #geom_point() +
-  #geom_point(alpha = 0.05, shape = ".") +
-  geom_smooth(method="lm", show.legend = FALSE) +
-  theme_bw() + 
-  xlab("Topic Theta") +
-  ylab("Sentiment") +
-  ggtitle("Correlation Between Sentiment and Topic") +
-  facet_wrap(~topic)
-```
-
-```{r}
-# for all parties (color)
-ggplot(theta_data_long_reg,aes(y=sentiment,x=theta, color = party, fill = party)) +
-  #geom_point(alpha = 0.05, shape = ".") +
-  geom_smooth(method="lm") +
-  theme_bw() + 
-  xlab("Topic Theta") +
-  ylab("Sentiment") +
-  ggtitle("Correlation Between Sentiment and Topic") +
-  facet_wrap(~party)
-facet_wrap(~topic)
-```
-
-
-
-
-
-
-## 7. Exploratory part (just for ourselves)
-Leave out in the end!
-
-*Descriptive*
-```{r topics_5, eval=FALSE, include=FALSE}
-# fit a simple model with 12 topics
-topic_mod_2 <- stm(HoC_dfm, K = 12, seed = 12345)
-labelTopics(topic_mod_2)
-#plot(topic_mod_2, type = "labels", labeltype = "prob") # or frex, lift, score
-findThoughts
-# check if topics are exclusive 
-dotchart(exclusivity(topic_mod_2), labels = 1:12)
-
-#check if topics are coherent
-cohere <- semanticCoherence(topic_mod_2, HoC_dfm)
-dotchart(cohere, labels = 1:12)
 
 ```
 
 
-```{r topics_6, eval=FALSE, include=FALSE}
-# topic model prevelance by party
-# new topic model mod3  --> @Amir check why error showss up regarding content covariate lenght? 
 
-topic_mod_3 <- stm(HoC_stm$documents, vocab = HoC_stm$vocab, 
-             K = 6, ~ party, data=HoC_stm$data, seed = 12345)
-#estimating the effect in term of topic-proportions which are the outcome variable. 
-#conditional expectation of topic prevalence given document characteristics.
-topic_mod_3 <- estimateEffect(1:6~HoC_stm$party, topic_mod_1, HoC_stm)
+### 7. Appendix
 
-#plot to see exclusivity of topics
-plot(topicCorr(topic_mod_3))
-#plot to chec
-topicQuality(topic_mod_3, documents = HoC_stm$documents)
-dim(topic_mod_3$beta$logbeta[[1]])
+######################
+# EXTRA DESCRIPTIVES #
+######################
 
-#code to add labels
-labels <- apply(sageLabels(topic_mod_1)$marginal$frex, 1,
-                function(x){ paste(x[1:4], collapse = "-") })
+*Frequency of words related to migration (including key terms)*
+```{r kwic_4, eval=FALSE, include=FALSE}
+HoC_dfm_word_freq <- textstat_frequency(HoC_dfm, n=100)
+# Sort by reverse frequency order
+HoC_dfm_word_freq$feature <- with(HoC_dfm_word_freq, reorder(feature, -frequency))
 
+ggplot(HoC_dfm_word_freq, 
+       aes(x = feature, y = frequency)) +
+  geom_point() + 
+  theme(axis.text.x = element_text(angle = 60, hjust = 1))
 
 ```
 
-*Just to check what the sentiment analysis does*
+
+#############################
+# EXTRA CODE ABOUT SENTIMENT#
+#############################
+
+*check what the sentiment analysis does*
 ```{r just for us, eval=FALSE, include=FALSE}
-
 text <- data.frame(text =c("nice","evil","and"))
 text <- corpus(text)
 sent_text <- textstat_polarity(text, 
@@ -948,8 +832,7 @@ sent_text <- textstat_polarity(text,
 ```
 
 ```{r just for us_2, eval=FALSE, include=FALSE}
-
-#### Sentiment only for refugee* by party
+# Sentiment only for refugee* by party
 refu <- c("refugee*","Refugee*")
 refugee <- filter(HoC_corp_time, grepl(paste(refu,collapse="|"), agenda) | grepl(paste(refu,collapse="|"), text))
 refcorp <- corpus(refugee)
@@ -975,13 +858,11 @@ ggplot(ref_party)+
   geom_vline(xintercept = as.Date("2016-06-23"), linetype = "dashed", color = "red")+ # Brexit referendum
   theme(axis.text.x = element_text(angle = 90))
 
-
 ```
 
-
-## Keywords in Context - Wordclouds
-Justification and Thoughts here.
-To understand better how key words are discussed in the text we first generated a key words in context data frame which constraints the corpus to only words that appear 20 words before a key word and 20 words after. 
+####################################
+# EXTRA CODE ON KWIC /  Wordclouds #
+####################################
 
 *KWIC - Wordcloud incl. keywords*
 ```{r kwic, eval=FALSE, include=FALSE}
@@ -991,7 +872,6 @@ textplot_wordcloud(HoC_kwic_dfm, max_words = 90, color = rev(RColorBrewer::brewe
 *KWIC - Wordcloud excl. keywords*
 ```{r kwic_2, eval=FALSE, include=FALSE}
 
-## removing also key words to see what is left
 HoC_kwic_dfm_no_key <- dfm(HoC_kwic_corp,
                        remove_punct = TRUE,
                        remove = c(as.vector(key_words_img),stopwords()),
@@ -1003,9 +883,8 @@ HoC_kwic_dfm_no_key <- dfm(HoC_kwic_corp,
 textplot_wordcloud(HoC_kwic_dfm_no_key, max_words = 90, color = rev(RColorBrewer::brewer.pal(10, "RdBu")))
 ```
 
-*Plot: Top words co-concurence matrix of key words in context*
+*Plot: Top words kwic co-concurrence matrix*
 ```{r kwic_3, eval=FALSE, include=FALSE}
-#plot feature concourence matrix
 HoC_kwic_fcm <-
   tokens(HoC_kwic_corp, remove_punct = TRUE) %>%
   tokens_tolower() %>%
@@ -1018,19 +897,97 @@ set.seed(100)
 textplot_network(fcm_select(HoC_kwic_fcm, topfeats), min_freq = 0.8)
 ```
 
-*Frequency of words related to migration (including key terms)*
-```{r kwic_4, eval=FALSE, include=FALSE}
+####################################
+# EXTRA CODE SENTIMENT & TOPICs/lm #
+####################################
 
-HoC_dfm_word_freq <- textstat_frequency(HoC_dfm, n=100)
-# Sort by reverse frequency order
-HoC_dfm_word_freq$feature <- with(HoC_dfm_word_freq, reorder(feature, -frequency))
+The following code tries to investigate the relation between sentiments and topic, and how that changes by parties. This does not aim to show causal relations but to provide the reader with an intuition how sentiment regarding different topics vary between parties, and, depending on the topic discussed. 
 
-ggplot(HoC_dfm_word_freq, 
-       aes(x = feature, y = frequency)) +
-  geom_point() + 
-  theme(axis.text.x = element_text(angle = 60, hjust = 1))
-
+*Data frames for lm models*
+```{r dataframes for lm}
+# filter sentiment data frame
+theta_data_long_reg <- theta_data_long %>%
+  filter(party == "Con" | party == "Lab" |  party == "LibDem" | party == "SNP" | party == "DUP")
+#subset data to just one topic (1)
+sentiment_topic1 <- theta_data_long_reg %>%
+  filter(topic == names(HoC_theta_data)[1])
+#subset data to just one topic (2)
+sentiment_topic2 <- theta_data_long_reg %>%
+  filter(topic == names(HoC_theta_data)[2])
+#subset data to just one topic (3)
+sentiment_topic3 <- theta_data_long_reg %>%
+  filter(topic == names(HoC_theta_data)[3])
+#subset data to just one topic (4)
+sentiment_topic4 <- theta_data_long_reg %>%
+  filter(topic == names(HoC_theta_data)[4])
+#subset data to just one topic (5)
+sentiment_topic5 <- theta_data_long_reg %>%
+  filter(topic == names(HoC_theta_data)[5])
+#subset data to just one topic (6)
+sentiment_topic6 <- theta_data_long_reg %>%
+  filter(topic == names(HoC_theta_data)[6])
 ```
+
+*lm models for each topic*
+```{r lm to disern correlations between sentiment and topics}
+## regression models for each topic 
+og_reg <- lm(sentiment~theta, data=theta_data_long_reg)
+summary(og_reg)
+# disagregated by topic
+names(HoC_theta_data)[1]
+#lm for the 6 topics
+reg1 <- lm(sentiment~theta, data=sentiment_topic1)
+summary(reg1)
+names(HoC_theta_data)[2]
+reg2 <- lm(sentiment~theta, data=sentiment_topic2)
+summary(reg2)
+names(HoC_theta_data)[3]
+reg3 <- lm(sentiment~theta, data=sentiment_topic3)
+summary(reg3)
+names(HoC_theta_data)[4]
+reg4 <- lm(sentiment~theta, data=sentiment_topic4)
+summary(reg4)
+names(HoC_theta_data)[5]
+reg5 <- lm(sentiment~theta, data=sentiment_topic5)
+summary(reg5)
+names(HoC_theta_data)[6]
+reg6 <- lm(sentiment~theta, data=sentiment_topic6)
+summary(reg6)
+```
+
+*output table for lm models*
+```{r stargazer}
+# stargazer 
+library(stargazer)
+stargazer(reg1, reg2, reg3, reg4, reg5, reg6, type="text")
+```
+
+*plot correlation between sentiment and topic*
+```{r}
+#plot for topic and sentiment
+ggplot(theta_data_long_reg,aes(y=sentiment,x=theta)) +
+  geom_smooth(method="lm", show.legend = FALSE) +
+  theme_bw() + 
+  xlab("Topic Theta Mean") +
+  ylab("Sentiment") +
+  ggtitle("Correlation Between Sentiment and Topic") +
+  facet_wrap(~topic)
+```
+
+*plot correlation between sentiment and topic by party*
+```{r plot lm}
+#plot with all parties
+ggplot(theta_data_long_reg,aes(y=sentiment,x=theta, color = party, fill = party)) +
+  #geom_point() +
+  geom_smooth(method="lm") +
+  theme_bw() + 
+  xlab("Topic Theta Mean") +
+  ylab("Sentiment") +
+  ggtitle("Correlation Between Sentiment and Topic by Party") +
+  facet_wrap(~topic)
+```
+
+
 
 
 

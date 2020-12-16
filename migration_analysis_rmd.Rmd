@@ -427,8 +427,8 @@ kwic_asyl_fv <- merge(kwic_asyl,
 
 ```
 ```{r}
-library(tidytext)
-?tf-idf
+#library(tidytext)
+#?tf-idf
 ```
 
 *Graph 3: KWIC sentiment*
@@ -620,10 +620,10 @@ names(HoC_theta_data)[1:6] <- labels_topic_mod_1
 ####################################
 
 # save and load topic model dataframe
-save(HoC_theta_data, file = "HoC_theta_data_6_topics_new_no_kwic.RData")
-topic_6_first <- load("HoC_theta_data.RData")
-topic_12_new <- load("HoC_theta_data_6_topics_new.RData")
-topic_6_new_no_kwic <- load("HoC_theta_data_6_topics_new_no_kwic.RData")
+
+save(HoC_theta_data, file = "HoC_theta_data_final.RData")
+load("HoC_theta_data_final.RData")
+
 
 ```
 
@@ -757,9 +757,9 @@ theta_long_data_year <- theta_data_long %>%
   summarise(theta.means = mean(theta))
 
 
-ggplot(theta_long_data_year,aes(x=year, y=theta.means, group = 1, color = topic)) + 
-  geom_point() +
-  geom_line() +
+ggplot(theta_long_data_year,aes(x=year, y=theta.means, group = 1), color = "black") + 
+  #geom_point() +
+  geom_line(size = 1) +
   theme(legend.position = "none")+
   geom_vline(xintercept = "2015", linetype = "dashed")+ #general election 2015
   geom_vline(xintercept = "2016", linetype = "dashed", color = "red")+ # Brexit referendum

@@ -751,12 +751,13 @@ theta_data_long <- pivot_longer(
 theta_long_data_year <- theta_data_long %>%
   mutate(year = str_sub(date, 1, 4)) %>%
   group_by(year, topic) %>% 
-  dplyr::summarise(theta.means = mean(theta))
+  summarise(theta.means = mean(theta))
 
 
 ggplot(theta_long_data_year,aes(x=year, y=theta.means, group = 1, color = topic)) + 
   geom_point() +
   geom_line() +
+  theme(legend.position = "none")+
   geom_vline(xintercept = "2015", linetype = "dashed")+ #general election 2015
   geom_vline(xintercept = "2016", linetype = "dashed", color = "red")+ # Brexit referendum
   facet_wrap(~topic)
@@ -768,7 +769,7 @@ ggplot(theta_long_data_year,aes(x=year, y=theta.means, group = 1, color = topic)
 theta_long_data_year_1 <- theta_data_long %>%
   mutate(year = str_sub(date, 1, 4)) %>%
   group_by(year, topic, party) %>% 
-  dplyr::summarise(theta.means = mean(theta))
+  summarise(theta.means = mean(theta))
 
 # plot all parties together (plot by topic, color by party)
 k <- ggplot()  +
@@ -930,29 +931,27 @@ sentiment_topic6 <- theta_data_long_reg %>%
 
 *lm models for each topic*
 ```{r lm to disern correlations between sentiment and topics}
-## regression models for each topic 
-og_reg <- lm(sentiment~theta, data=theta_data_long_reg)
-summary(og_reg)
+
 # disagregated by topic
 names(HoC_theta_data)[1]
 #lm for the 6 topics
 reg1 <- lm(sentiment~theta, data=sentiment_topic1)
-summary(reg1)
+
 names(HoC_theta_data)[2]
 reg2 <- lm(sentiment~theta, data=sentiment_topic2)
-summary(reg2)
+
 names(HoC_theta_data)[3]
 reg3 <- lm(sentiment~theta, data=sentiment_topic3)
-summary(reg3)
+
 names(HoC_theta_data)[4]
 reg4 <- lm(sentiment~theta, data=sentiment_topic4)
-summary(reg4)
+
 names(HoC_theta_data)[5]
 reg5 <- lm(sentiment~theta, data=sentiment_topic5)
-summary(reg5)
+
 names(HoC_theta_data)[6]
 reg6 <- lm(sentiment~theta, data=sentiment_topic6)
-summary(reg6)
+
 ```
 
 *output table for lm models*

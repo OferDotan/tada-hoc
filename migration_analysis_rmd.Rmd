@@ -370,6 +370,7 @@ asyl <- c("asylum","Asylum")
 
 kwic_imm <- filter(HoC_kwic_data,
                    grepl(paste(imm,collapse="|"), keyword))
+
 kwic_refu <- filter(HoC_kwic_data,
                    grepl(paste(refu,collapse="|"), keyword))
 kwic_asyl <- filter(HoC_kwic_data,
@@ -382,6 +383,8 @@ kwic_asyl <- filter(HoC_kwic_data,
 kwic_imm_corp <- corpus(kwic_imm)
 kwic_refu_corp <- corpus(kwic_refu)
 kwic_asyl_corp <- corpus(kwic_asyl)
+
+
 
 ```
 

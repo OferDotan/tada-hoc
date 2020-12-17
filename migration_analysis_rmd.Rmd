@@ -504,7 +504,7 @@ load("HoC_theta_data_final.RData")
 ```
 
 *Topic Visualizations:*
-```{r topic_by_party_plot, message = FALSE, warning=FALSE}
+```{r topic_by_party_plot, echo=FALSE, message=FALSE, warning=FALSE}
 
 load("HoC_theta_data_final.RData")
 
@@ -549,6 +549,11 @@ theta_data_long <- pivot_longer(
   cols = names(HoC_theta_data[1:6]), 
   names_to = "topic",
   values_to = "theta")
+
+theta_long_data_year <- theta_data_long %>%
+  mutate(year = str_sub(date, 1, 4)) %>%
+  group_by(year, topic) %>% 
+  summarise(theta.means = mean(theta))
 
 theta_long_data_year_1 <- theta_data_long %>%
   mutate(year = str_sub(date, 1, 4)) %>%

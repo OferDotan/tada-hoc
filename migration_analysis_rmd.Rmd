@@ -69,7 +69,7 @@ explain the subset + limitations
 Choosing a unit for analysis is a challenging task, and in our case, the desicions we took were related both to substantive and practical consideration of needing to narrow down a very large database to perform a more in depth analysis. Thus, we choose to focus on texts from 2010 to present day. 2010 is a good starting point for our analysis because that was the year of the Tory manifesto and the general elections which resulted with a win for the Conservative party. This allow us for a sufficient time frame that has observations both before our main events of interest, namely the 2015 General Election, the migration wave and the Brexit Referendum, and after, from 2016 until 2020.
 In terms of content, we subset the corpus only to those speeches that contain a reference to key words related to the topic. Specifically, "immigra", "refugee" or "asylum" because we expect parliamentary debates to be explicit in their language, meaning that if immigration is discussed one of these key words will show either in the agenda description or in the speech itself and therefore we think this method would allow us to capture most of the substantive debates regarding immigration (Van Dijk, 2000). This type of subsetting allows us to focus our analysis and remove noise from unrelated text, and yet, contain the limitation of not including any documents who discuss immigration without mentioning the three key terms chosen in either agenda description or text. Further, by this subsetting we are very likely to loose short responses to speeches carried out. 
 
-```{r subset, results = 'hide', message = FALSE, warning=FALSE, echo=FALSE, fig.show='hide'}
+```{r subset, fig.show='hide', message=FALSE, warning=FALSE, include=FALSE, results='hide'}
 
 
 # select time frame 
@@ -110,7 +110,7 @@ mention events etc.
 
 
 *2.2.1 General Corpus*
-```{r dataframes, results = 'hide', message = FALSE, warning=FALSE, echo=FALSE, fig.show='hide'}
+```{r dataframes, fig.show='hide', message=FALSE, warning=FALSE, include=FALSE, results='hide'}
 
 HoC_corp <- corpus(HoC_data)
 
@@ -118,7 +118,7 @@ HoC_corp <- corpus(HoC_data)
 
 
 *2.2.3 General consideration/definitions used across analysis*
-```{r dataframes_3, results = 'hide', message = FALSE, warning=FALSE, echo=FALSE, fig.show='hide'}
+```{r dataframes_3, fig.show='hide', message=FALSE, warning=FALSE, include=FALSE, results='hide'}
 
 #colors for parties
 levels(factor((HoC_data$party)))
@@ -153,7 +153,7 @@ Justifications and throughts here.
 
 - Findings plot 3: While sharp ups and downs were still visible in plots 1 and 2, averaging over 6 months allows for a smoother observation of debate evolution. From January 2012 to November 2014 we are able to observe a steady increase in time spend on debates with regards to their 6-month averages. This is likely due to the spikes showing on a monthly level in both January and June of 2014. The second half of 2014 as well as the first half of 2015 saw less time being devoted to immigration related debates. This suggest that overall, the content on which we selected our subset did not increase in particular prevalence before the 2015 General Election. However, Between May 2015 and June 2016, hence the year following the general election and leading up to the Brexit referendum, saw a major increase in time spend on immigration-related debates. On average, the HoC spend almost twice as much time on immigration related debates during Sep 2015 - Feb 2016 when compared to the period of Dec 2014 - May 2015. Hence, debates seem to have gained in priority after the GEneral election and leading up to the referendum. 
 
-```{r subset of all debate, results = 'hide', message = FALSE, warning=FALSE, echo=FALSE, fig.show='hide'}
+```{r subset of all debate, echo=FALSE, fig.show='hide', message=FALSE, warning=FALSE, results='hide'}
 
 # subset as % of overall debates within same time frame 2.97%
 
@@ -176,7 +176,7 @@ contr_brex <- sum(HoC_data$terms[HoC_data$date <= "2016-06-23" & HoC_data$date >
 
 *Plot 1: Prevalence of immigration debates over time by month | Total number of words as a proxy for time spent on debating.* 
 
-```{r plot 3, echo=FALSE,  message = FALSE}
+```{r plot 3, echo=FALSE, message=FALSE}
 
 HoC_data$date <- as.Date(HoC_data$date, format="%Y-%m-%d")
 
@@ -201,7 +201,7 @@ dygraph(descr_plot,
 
 *Concentration of party-specific contributions*
 
-```{r plot 4: prevalence by party, results = 'hide', message = FALSE, warning=FALSE, echo=FALSE }
+```{r plot 4: prevalence by party, echo=FALSE, message=FALSE, warning=FALSE, results='hide'}
 
 HoC_data$date <- as.Date(HoC_data$date, format="%Y-%m-%d")
 
@@ -229,7 +229,7 @@ This density plot gives us a sense of the frequency each party discussed each pa
 
 
 *Sentiment | Overall Corpus*
-```{r sentiment, results = 'hide', message = FALSE, warning=FALSE, echo=FALSE, fig.show='hide'}
+```{r sentiment, fig.show='hide', message=FALSE, warning=FALSE, include=FALSE, results='hide'}
 sentiment <- textstat_polarity(HoC_corp, 
                                data_dictionary_LSD2015)
 
@@ -240,7 +240,7 @@ HoC_data = cbind(HoC_data,sentiment)
 ```
 
 *Graph 1: Overall Sentiment*
-```{r sentiment graph 1, results = 'hide', message = FALSE, warning=FALSE, echo=FALSE, fig.show='hide'}
+```{r sentiment graph 1, echo=FALSE, fig.show='hide', message=FALSE, warning=FALSE, results='hide'}
 
 HoC_data$date <- as.Date(HoC_data$date, format="%Y-%m-%d")
 HoC_senti_data <- data.frame(date = HoC_data$date, 
@@ -267,7 +267,7 @@ senti
 ```
 
 *Graph 2: Sentiment by party*
-```{r sentiment graph 2, echo=FALSE,  message = FALSE}
+```{r sentiment graph 2, echo=FALSE, message=FALSE}
 
 HoC_data$date <- as.Date(HoC_data$date, format="%Y-%m-%d")
 
@@ -300,7 +300,7 @@ party_senti_plot
 ## 5. Sentiment in Context
 
 *Create KWIC - Dataframe, Corpus and Dfm*
-```{r dataframes_1, results = 'hide', message = FALSE, warning=FALSE, echo=FALSE, fig.show='hide'}
+```{r dataframes_1, fig.show='hide', message=FALSE, warning=FALSE, include=FALSE, results='hide'}
 #rerun general corpus to include sentiment
 HoC_corp <- corpus(HoC_data)
 
@@ -324,7 +324,7 @@ HoC_kwic_data <- tibble(speaker = HoC_kwic$docname,
 
 
 *Subset KWIC according to keywords*
-```{r sentiment kwic, results = 'hide', message = FALSE, warning=FALSE, echo=FALSE, fig.show='hide'}
+```{r sentiment kwic, fig.show='hide', message=FALSE, warning=FALSE, include=FALSE, results='hide'}
 
 imm <- c("immigra*","Immigra*")
 refu <- c("refugee*","Refugee*")
@@ -340,7 +340,7 @@ kwic_asyl <- filter(HoC_kwic_data,
 
 ```
 
-```{r sentiment kwic 2, results = 'hide', message = FALSE, warning=FALSE, echo=FALSE, fig.show='hide'}
+```{r sentiment kwic 2, fig.show='hide', message=FALSE, warning=FALSE, include=FALSE, results='hide'}
 # make individual corpora
 kwic_imm_corp <- corpus(kwic_imm)
 kwic_refu_corp <- corpus(kwic_refu)
@@ -349,7 +349,7 @@ kwic_asyl_corp <- corpus(kwic_asyl)
 ```
 
 *Sentiment  Keywords in Context of keyword*
-```{r sentiment kwic 3,results = 'hide', message = FALSE, warning=FALSE, echo=FALSE, fig.show='hide'}
+```{r sentiment kwic 3, fig.show='hide', message=FALSE, warning=FALSE, include=FALSE, results='hide'}
 
 kwic_imm_senti <- textstat_polarity(kwic_imm_corp, 
                                     data_dictionary_LSD2015)
@@ -390,7 +390,7 @@ kwic_asyl_fv <- merge(kwic_asyl,
 ```
 
 *Graph Sentiment by keywords*
-```{r sentiment kwic graph 3, results = 'hide', message = FALSE, warning=FALSE, echo=FALSE}
+```{r sentiment kwic graph 3, echo=FALSE, message=FALSE, warning=FALSE, results='hide'}
 
 kwic_senti <- data.frame(kwic_imm_fv %>% 
   group_by(month=floor_date(date, "year")) %>% 
@@ -428,7 +428,7 @@ keywords_plot
 ## 6. Topics
 
 *Create Dfm* Include here to also include sentiment in the dfm.
-```{r topics_dfm, message = FALSE, warning=FALSE}
+```{r topics_dfm, message=FALSE, warning=FALSE, include=FALSE}
 
 HoC_dfm <- dfm(HoC_corp, 
                   remove_punct = TRUE,
@@ -542,7 +542,13 @@ topic_by_party_plot
 ```
 
 *Topic evolution over time by party*
-```{r ind_topics_by_time_by_party_plot, message = FALSE, warning=FALSE}
+```{r ind_topics_by_time_by_party_plot, echo=FALSE, message=FALSE, warning=FALSE}
+
+theta_data_long <- pivot_longer(
+  HoC_theta_data, 
+  cols = names(HoC_theta_data[1:6]), 
+  names_to = "topic",
+  values_to = "theta")
 
 theta_long_data_year_1 <- theta_data_long %>%
   mutate(year = str_sub(date, 1, 4)) %>%
@@ -567,7 +573,7 @@ k
 ```
 
 *sentiment and Topics: Correlation*
-```{r topics-sentiment correlation,message = FALSE, warning=FALSE}
+```{r topics-sentiment correlation, echo=FALSE, message=FALSE, warning=FALSE}
 
 cor_sent_top_1 <- cor(theta_data_party[1],theta_data_party$sentiment)
 cor_sent_top_2 <- cor(theta_data_party[2],theta_data_party$sentiment)

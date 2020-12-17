@@ -390,7 +390,7 @@ kwic_asyl_fv <- merge(kwic_asyl,
 ```
 
 *Graph Sentiment by keywords*
-```{r sentiment kwic graph 3, echo=FALSE, message=FALSE, warning=FALSE, results='hide'}
+```{r sentiment kwic graph 3, echo=FALSE, message=FALSE, warning=FALSE}
 
 kwic_senti <- data.frame(kwic_imm_fv %>% 
   group_by(month=floor_date(date, "year")) %>% 

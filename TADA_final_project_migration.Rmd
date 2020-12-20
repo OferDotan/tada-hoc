@@ -1,0 +1,1020 @@
+---
+title: "Immigration related debates in UK HOC"
+author: "Amir Firestone (192245), Ofer Dotan (195169), Jan Panhuysen (191679)"
+date: "20/12/2020"
+output:
+  prettydoc::html_pretty:
+    theme: hpstr
+    highlight: github
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+
+```
+
+## Abstract
+
+<font size="4">A text analysis of UK House of Commons (HoC) parliamentary debates from 2010 to 2020 reveals that discussions relating to immigration meaningfully increased following the general election in 2015 and leading to Brexit a time which also coincided with the European migration crisis. By performing a topic model analysis, it becomes evident that migration-related discussions in the HoC revolved around four central themes – social welfare, economic migration, refugees fleeing conflict and the humanitarian concerns of migration. The relative prevalence of these topics in party-specific contributions changed over the years in correlation with significant global and national events. Topic-related sentiments also help identify trends in migration-related debates in the HoC. While the UK’s five largest political parties exhibit positive sentiment toward the topic of economic migration, they are found to overwhelmingly present the humanitarian concerns of migration in a negative frame. These findings suggest the potential of using these methods to inform coalition building on issues related to immigration.</font>
+
+
+## 1. Introduction
+
+Like most world economies, the UK is facing a challenging period in the wake of the Coronavirus pandemic. During these already challenging times, immigration is likely to become a sensitive topic in policymaking. Particularly so, given that the UK’s exit of the European Union, which is only now beginning to come into effect, was driven in part by the desire for immigration-related legislation to be made on UK’s terms.
+
+A multitude of debates relate to that issue. While many of those who voted “leave” were most concerned about the number of immigrants coming into Britain (Sapsted, 2020), others argue that preventing the immigration of skilled workers is likely to hinder the country’s economic recovery due to gaps in currently-high-demand-jobs (Grierson, 2020). In fact, the COVID-19 outbreak has brought to attention just how much the UK’s healthcare and social care systems depend on workers who originally came from abroad (Sapsted, 2020). In any case, regardless of how circumstances develop in the UK and other countries, some people will still leave their homes in search of a better future. Hence, debates on immigration will likely remain of core parliamentary importance.
+
+As discussions in the House of Commons (HoC) are instrumental to the unfolding of policies and pieces of legislation on immigration, understanding politicians’ contributions to these debates can provide valuable insights into how certain policies came into effect. It is therefore impotant to  explore how parliamentary debates on immigration have changed over the years leading up to the 2015 general election, during the Syrian refugee crisis and since the Brexit referendum.
+
+Covering this exact time period and building on an approach of using speech data to investigate themes and related sentiments in parliamentary debates (Bara, Weale & Bicuelet, 2007), our analysis investigates the most prevalent topics related to immigration and parties’ respective attitudes towards them.
+
+With this, we aim at capturing changes in the prevalence of migration-related debates in parliament, how different parties cover such topics over time, and what sentiment is associated with specific topics of immigration. Comprehensive insights in this direction, for which this study provides guidance, could help policymakers develop actionable strategies for coalition building around immigration-related policies.
+
+
+## 2. Packages and Data
+
+Our exploration is based on HoC speech data from a database called ParlSpeech V2 by Christian Rauh and Jan Schwalbach (2020). This dataset is unique in its scope, covering all parliamentary debates from 1998 and up until 2020, resulting in 1,956,223 speeches (Rauh & Schwalbach, 2020, p. 10). Speeches represent individual contributions by members of parliament and were collected from the digital Commons Hansard, which contains the plenary protocols and documents from which speech text and metadata are extracted. As a result, the corpus includes a range of covariates like party affiliation and agenda, which facilitate a detailed set of contextual and party-specific analyses. In our analysis, we make use of these metadata and leverage the Lexicoder 2015 sentiment dictionary, which was established to produce reliable estimates based on 2,858-word patterns relating to negative sentiment and 1,709-word patterns indicating positive sentiment (Young & Soroka, 2012). This sentiment dictionary is particularly relevant to our purposes as it was designed to analyze sentiment in political language of legislative speech and has been applied specifically to migration discourse (Heidenreich et al., 2020).
+
+```{r packages, fig.show='hide', message=FALSE, warning=FALSE, include=FALSE, results='hide'}
+library(quanteda)
+library(quanteda.textmodels)
+library(quanteda.sentiment)
+library(quanteda.textstats)
+library(readtext)
+library(tidyverse)
+library(stm)
+library(lubridate)
+library(lme4)
+library(lattice)
+library(wordcloud)
+library(ggridges)
+library(plotly)
+library(tm)
+library(dygraphs)
+library(xts)
+library(ggiraphExtra)
+```
+
+```{r data, fig.show='hide', message=FALSE, warning=FALSE, include=FALSE, results='hide'}
+
+Corp_HouseOfCommons_V2  <- readRDS("~/Desktop/tada-hoc/Corp_HouseOfCommons_V2.rds")
+```
+
+
+## 3. Subset & Method
+
+In a first step, we choose to focus on texts from 2010 to present day, leaving us with slightly fewer than 750,000 individual contributions. 2010 is a good starting point for our analysis because that was the year of the Tory manifesto and the general elections. This sets a sufficient time frame that has observations both before our main events of interest—namely the 2015 General Election, the Syrian refugee crisis, and the Brexit Referendum—and after, from 2016 until 2020. In terms of content, we subset the corpus to those contributions that either contain a reference to keywords related to our topic of immigration, or that were made in response to agenda points that contain such keywords. The keywords we used were “I/immigra* ”, “R/refuge*” and “A/asylum.” In line with existing research, we expect parliamentary debates to be explicit in their language, meaning that if immigration is discussed, one of these keywords will show either in the agenda description or in the speech itself (Van Dijk, 2000). This would allow us to capture most of the substantive debates regarding immigration. Finally, we exclude speeches that were shorter than 10 words and select only the contributions of the five parties that made the most overall contributions to remove noise from unrelated text. These were the Conservatives, Labour, Liberal Democrats, SNP and DUP. The downside of such subsetting is that we lose documents that discuss immigration without mentioning the three keywords chosen in either agenda description or text. 
+
+The aforementioned steps yield a final subset of 22,257 individual contributions, representing about 3% of the parliament’s overall debates during that period as well as about 6.25% of the overall time spent in debates. The five parties selected represent about 98% of the overall contributions made.
+
+To offer a blueprint, we use both a general subset of the HoC parliamentary debates described above and a more targeted subset of text immediately surrounding selected keywords. Essentially, this subset contains bubbles of text within a range of 20 words before and after a keyword and without repeating two keywords when they are presented within the same string. We created this subset in order to pursue a deeper analysis of how these terms are used in context.
+
+```{r subset, fig.show='hide', message=FALSE, warning=FALSE, include=FALSE, results='hide'}
+
+# select time frame 
+
+HoC_corp_time_0 <- Corp_HouseOfCommons_V2 %>% 
+  select(!c(iso3country, party.facts.id, parliament)) %>%
+  filter(date>"2009-12-31") #749177 obs.
+
+# select relevant content 
+
+HoC_corp_time <- HoC_corp_time_0[HoC_corp_time_0$terms>10,] #708998 obs.
+
+key_words_img <- c("immigra*","Immigra*","refugee*","Refugee*","asylum","Asylum"," migra*"," Migra*")
+HoC_data <- filter(HoC_corp_time, 
+                  grepl(paste(key_words_img,collapse="|"), agenda) | 
+                  grepl(paste(key_words_img,collapse="|"), text)) #22909 obs.
+
+# select the 5 parties with highest contribution, covering >98% of the initial content
+
+party_contr <- HoC_data %>%
+  group_by(party) %>% 
+  summarise(contribution=(sum(terms)/sum(HoC_data$terms))*100)
+
+party_contr <- party_contr[order(party_contr$contribution, decreasing = TRUE),]
+
+parties <- party_contr$party[1:5]
+
+HoC_data <- filter(HoC_data, grepl(paste(parties,collapse="|"), party))#22257 obs.
+
+
+```
+
+```{r dataframes, fig.show='hide', message=FALSE, warning=FALSE, include=FALSE, results='hide'}
+# 2.2.1 General Corpus
+
+HoC_corp <- corpus(HoC_data)
+
+```
+
+```{r general considerations, fig.show='hide', message=FALSE, warning=FALSE, include=FALSE, results='hide'}
+# 2.2.3 General consideration/definitions used across analysis
+
+#colors for parties
+levels(factor((HoC_data$party)))
+part <- levels(factor((HoC_data$party)))
+
+part.col <- c("#0087DC","#D46A4C","#DC241f","#FDBB30","#FFFF00") #official party-colors
+
+names(part.col)  <- part
+
+```
+
+
+## 4. Descriptive Findings 
+
+A first analysis of the data reveals a rapid increase in discussion about immigration following the general elections in 2015, which also correlates with the progression of increasing immigration across the EU. Technically speaking, the analysis depicts the count of individual contributions made irrespective of length. By looking at the overall agenda points devoted or somehow related to immigration it shows that those have almost tripled between 2010 and 2020 with a nearly linear increase over the years. 
+
+```{r descriptive_1, fig.show='hide', message=FALSE, warning=FALSE, include=FALSE, results='hide'}
+
+# subset as % of overall debates within same time frame 2.97%
+
+nrow(HoC_data)/nrow(HoC_corp_time_0)*100
+
+# subset as % of time spend 6.244%
+
+sum(HoC_data$terms)/sum(HoC_corp_time_0$terms)*100
+
+
+# time spend on immigration related debates during the year before Election compared to the year before Brexit
+
+contr_elect <- sum(HoC_data$terms[HoC_data$date <= "2015-05-07" & HoC_data$date >= "2014-05-07"])
+
+contr_brex <- sum(HoC_data$terms[HoC_data$date <= "2016-06-23" & HoC_data$date >= "2015-06-23"])
+
+((contr_brex/contr_elect)-1)*100 # 75.2% more time spend on immigration related debates in year leading up to Brexit compared to the one leading up to election.
+
+```
+
+```{r figure 1, echo=FALSE, message=FALSE, warning=FALSE}
+
+HoC_data$date <- as.Date(HoC_data$date, format="%Y-%m-%d")
+
+doc_sum_by_words = HoC_data %>% 
+  group_by(month=floor_date(date, "month")) %>% 
+  summarise(word_sum = sum(terms)) 
+
+descr_plot <- xts(x = doc_sum_by_words$word_sum, order.by = doc_sum_by_words$month)
+names(descr_plot) <- "# words"
+
+dygraph(descr_plot, 
+             main = "Contributions to Immigration-Related Debates <small>(As 6-month-averages)</small>",
+             ylab =  "# of words", xlab = "Year (by month)") %>% 
+  dyOptions(labelsUTC = TRUE, fillGraph=TRUE, fillAlpha=0.4, drawGrid = FALSE, colors="#69b3a2") %>%
+  dyRangeSelector() %>%
+  dyCrosshair(direction = "vertical") %>%
+  dyHighlight(highlightCircleSize = 5, highlightSeriesBackgroundAlpha = 0.2, hideOnMouseOut = FALSE)  %>%
+  dyRoller(rollPeriod = 6)%>%
+  dyEvent(x="2015-05-07", label = "General Election 2015")%>%
+  dyEvent(x="2016-06-23", label = "Brexit Referendum", color = "red")
+```
+<font size="2">Figure 1: Prevalence of immigration debates over time, using the number of words as a proxy for time spent on debating.</font>
+
+More comprehensively, Figure 1 uses the sum of words used in debates as an indicator of the time spent on the respective debate. Considering that the HoC only has a limited time available to discuss agenda points, devoting more time towards a debate may indicate certain priorities. In the months before January 2018, where there seems to be a decrease in debates, there were several holidays including summer holiday, an external conference, November break and Christmas holiday. To even-out spikes and breaks, which are likely due to the different recess dates within the HoC (UK Parliament, 2020), the plot depicts the 6-month-average total number of words spent on immigration-related debates. By looking at averages in this way, it is possible to observe whether debate-preferences prevailed over time or whether they only peaked for short periods.
+
+From January 2012 to November 2014, we observe a steady increase in time (averaged over 6-months) spent on debates related to immigration. This is likely due to the monthly spikes in both January and June of 2014. The second half of 2014 as well as the first half of 2015 saw less time being devoted to immigration related debates. This suggest that overall, the content of our subset did not increase in prevalence before the 2015 General Election.
+
+However, between May 2015 and June 2016, the year following the general election and leading up to the Brexit referendum, there was a major increase in time spent on immigration-related debates. On average, the HoC spent almost twice as much time on immigration related debates during Sep 2015 - February 2016 when compared to the period of December 2014 - May 2015. This seems to indicate that immigration-related debates gained priority after the General election and leading up to the referendum.
+
+```{r figure 2, echo=FALSE, message=FALSE, warning=FALSE}
+
+HoC_data$date <- as.Date(HoC_data$date, format="%Y-%m-%d")
+
+sum_by_party = HoC_data %>% 
+  group_by(month=floor_date(date, "day"), party = party) %>% 
+  summarise(frequency = sum(terms)) 
+
+# Plot
+ggplot(sum_by_party, aes(x = month, y = party, fill = party)) +
+  geom_density_ridges(alpha=0.6) +
+  labs(title = "Contributions to immigration-related debates by party",
+       x= "Year (by month)",
+       y= "Party")+
+  scale_fill_manual(name = "Party", values = part.col)+
+  geom_vline(aes(xintercept = as.Date("2015-05-07"),color = "General Election 2015"), linetype = "dashed")+ #general election 2015
+  geom_vline(aes(xintercept = as.Date("2016-06-23"),color = "Brexit Referendum"), linetype = "dashed")+
+  scale_color_manual(name = "Events", values = c("General Election 2015" = "black", "Brexit Referendum" = "red"))
+
+```
+<br>
+<font size="2">Figure 2: Concentration of party-specific contributions.</font>
+
+Zooming in further, while the SNP and the DUP were deliberating immigration related topics more frequently after Brexit, other parties had a more constant trend of engagement with immigration-related speech. Importantly, the information that can be gathered from this density plot is limited in that it does not tell us anything about the substance of these speeches, but crudely how many words were used to discuss them. Nevertheless, this descriptive visualization does help us get an initial sense of the prevalence of immigration related speech produced by each of the parties we are focusing on.
+
+
+## 5. Topical Analysis
+
+In order to better understand developments in migration-related debates over time and the different party positions in these debates, it is important to distinguish these debates by the themes they discuss. To do this, we use the Structural Topic Model (STM).
+
+```{r sentiment corpus as a basis for topics, fig.show='hide', message=FALSE, warning=FALSE, include=FALSE, results='hide'}
+
+sentiment <- textstat_polarity(HoC_corp, 
+                               data_dictionary_LSD2015)
+
+sentiment$sent_prob <- 1/(1 + exp(-sentiment$sentiment))
+
+# add sentiment to initial data frame
+HoC_data = cbind(HoC_data,sentiment) 
+
+HoC_corp <- corpus(HoC_data)
+
+```
+
+```{r topics_dfm, message=FALSE, warning=FALSE, include=FALSE}
+
+HoC_dfm <- dfm(HoC_corp, 
+                  remove_punct = TRUE,
+                  remove = stopwords(),
+                  remove_symbols = TRUE,
+                  remove_separators = TRUE,
+                  split_hyphens = TRUE,
+                  remove_numbers = TRUE)
+
+HoC_dfm <- dfm_trim(HoC_dfm,
+                  min_termfreq = 2, 
+                  min_docfreq = 2)
+HoC_dfm <- dfm_subset(HoC_dfm, rowSums(HoC_dfm)>0)
+
+HoC_stm <-asSTMCorpus(HoC_dfm)
+```
+
+```{r topic models, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE}
+
+# fit a simple model with 6 topics
+topic_mod_1 <- stm(HoC_dfm, K = 6, seed = 12345)
+topic_labels <- labelTopics(topic_mod_1)
+plot(topic_mod_1, type = "labels", labeltype = "prob") # or frex, lift, score
+```
+
+```{r checking exclusivity, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE}
+
+dotchart(exclusivity(topic_mod_1), labels = 1:6, color = 1:6)
+
+```
+
+```{r checking coherence, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE}
+
+cohere <- semanticCoherence(topic_mod_1, HoC_dfm)
+dotchart(cohere, labels = 1:6, color = 1:6)
+
+```
+
+Using the STM package in R, we model 6 topics from the content of migration-related documents and assign each document a theta score for each topic. These scores represent the proportions of prevalence of each topic for each document. Next, we test how exclusive and coherent these topics are. While 6 topics may seem few, we are modelling topics from a subset of parliamentary debates that use migration-related keywords. This already limits the extent of topics potentially covered by these debates. Our test also shows that 6 is enough for allocating sufficiently exclusive topics.
+
+We combine the topic scores of each document to our dataset of migration-related debates. Next, we attribute to each topic a name based on the first 3 FREX terms, the words that are more frequent and most exclusive to each topic. One topic labelled “allowance, tax, dwp,” likely refers to content on migration that related to social welfare. The topic named “eea, seasonal, visa” relates to the portion of debates that address the economic dimensions of migration. “Iraq, Rohingya, Libya” describes the portion of debates that concern refugees fleeing conflict. The topic “tb, Sikh, Auschwitz” seems to indicate a collection of less prevalent migration-related topics such as Tuberculosis, specific migrant communities, and the Holocaust. The title “unaccompanied, trafficked, detention” describes the most vulnerable populations of migrants and related humanitarian concerns. Finally, the topic “vote, voting, motion” includes the procedural vocabulary of the House of Parliament.
+
+```{r topics_1, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE}
+# chunk not run in final knitting.
+
+# combine stm thetas with dfm docvars
+HoC_theta_data <- as.data.frame(topic_mod_1$theta) %>%
+  cbind(docvars(HoC_dfm))
+
+## naming topics
+#combine first 3 labels as a string for a new label
+labels_topic_mod_1 <- c()
+for (topicnumber in topic_labels$topicnums){
+  first_3<-(str_c(topic_labels$frex[topicnumber,1], 
+                  ", " , topic_labels$frex[topicnumber,2], 
+                  ", " , topic_labels$frex[topicnumber,3]))
+  labels_topic_mod_1<- append(labels_topic_mod_1, first_3)
+}
+
+# renaming columns
+names(HoC_theta_data)[1:6] <- labels_topic_mod_1
+
+
+####################################
+# save/load topic model data frame #
+####################################
+
+# save and load topic model dataframe
+
+#save(HoC_theta_data, file = "HoC_theta_data_final.RData")
+#load("HoC_theta_data_final.RData")
+
+```
+
+
+```{r topic_by_party_plot, echo=FALSE, message=FALSE}
+
+load("HoC_theta_data_final.RData")
+
+# grouping by party and generating means 
+theta_data_party <- HoC_theta_data %>%
+  group_by(party)
+
+theta_data_party_mean <- aggregate(theta_data_party[, 1:6], 
+                                   list(theta_data_party$party), 
+                                   mean)
+names(theta_data_party_mean)[1] <- "Party" 
+
+# Turning into a table of proportions
+theta_data_party_prop <- theta_data_party_mean[1] %>%
+  cbind(as.data.frame(
+    round(100*prop.table(theta_data_party_mean[2:7]),
+          digits=2)))
+
+# pivoting df for making figure
+party_prop_long <-theta_data_party_prop %>%
+  pivot_longer(c(2:7), 
+               names_to = "Topic", 
+               values_to = "Proportion")
+
+# visualizing proportions of topics by party
+
+topic_by_party_plot <- party_prop_long %>%
+  ggplot(aes(Party, Proportion, fill = Topic)) +
+  labs(title = "Topics By Party")+
+  geom_bar(position = "fill", stat = "identity") +
+  scale_y_continuous() + 
+  scale_fill_manual(values= rev(RColorBrewer::brewer.pal(6, "Spectral")))+
+  theme(axis.text.x = element_text(angle = 45, 
+                                   hjust = 1, 
+                                   size = 6))
+topic_by_party_plot
+
+
+```
+<br>
+<font size="2">Figure 3: Topics by party.</font>
+
+In figure 3, we plot the proportions of topics covered by each party over all the years of debate (2010-2020). This plot illustrates two main things. First, it demonstrates the relative prevalence of these six migration-related topics in parliamentary debates. From this we can see that aside from procedural vocabulary, the three most prevalent topics in these migration debates are economic migration, refugees fleeing conflict, and the humanitarian concerns of migration.
+
+In addition, this plot compares how different parties discuss migration in terms of these six topics. Here we see that the Conservatives discuss economic migration more than any other major party and to a greater extent than they discuss refugees fleeing conflict or the humanitarian concerns of migration. In comparison to the Conservatives, the Labour party discusses migration more often in the context of social welfare and humanitarian concerns.
+
+
+```{r ind_topics_by_time_by_party_plot, echo=FALSE,  message=FALSE, warning=FALSE}
+
+theta_data_long <- pivot_longer(
+  HoC_theta_data, 
+  cols = names(HoC_theta_data[1:6]), 
+  names_to = "topic",
+  values_to = "theta")
+
+theta_long_data_year <- theta_data_long %>%
+  mutate(year = str_sub(date, 1, 4)) %>%
+  group_by(year, topic) %>% 
+  summarise(theta.means = mean(theta))
+
+theta_long_data_year_1 <- theta_data_long %>%
+  mutate(year = str_sub(date, 1, 4)) %>%
+  group_by(year, topic, party) %>% 
+  summarise(theta.means = mean(theta))
+
+# plot all parties together (plot by topic, color by party)
+k <- ggplot()  +
+  geom_line(data = theta_long_data_year_1, aes(x=year, y = theta.means, group=party, color = party)) +
+   labs(title = "Topic Prevalence Across Time",
+       x= "Year",
+       y= "Theta")+
+  geom_line(data = theta_long_data_year,aes(x=year, y=theta.means, group = 1, color = "Average Prevalence")) +
+  geom_vline(xintercept = "2015", linetype = "dashed")+
+  geom_vline(xintercept = "2016", linetype = "dashed", color = "red")+
+  scale_color_manual(name = "", values = c(part.col, "Average Prevalence" = "black"))+
+  theme(axis.text.x = element_text(angle = 90))+
+  facet_wrap(~topic, labeller = label_wrap_gen(width = 25, multi_line = TRUE))
+
+k
+```
+<br>
+<font size="2">Figure 4: Topic prevalence across time by party.</font>
+
+To explore the change in topic prevalence over time, Figure 4 plots the yearly average prevalence of each topic between 2010 and 2020 (solid black line). This plot shows that while the topic of social welfare enjoys little prevalence in migration-related debates, it was most prevalent in the earlier years of the decade and has begun regaining attention in recent years. We also find that the topic of economic migration experienced a sharp decline in attention after 2013 and has only risen to prominence once again in post-BREXIT debates. The topic of refugees fleeing conflict first received attention in 2011, during the civil war in Libya, before becoming nearly three-times more prevalent at the peak of the Syrian refugee crisis in 2015. The topic lost traction in 2016 after the BREXIT referendum shifted political attention to other concerns regarding migration. Humanitarian concerns reached their highest level of prevalence in debates in 2016. This is likely due to the increased public awareness of the victims of migration following the peak of Europe’s migration crisis and Mediterranean crossings (UNHCR, 2020).
+
+Next, we can explore the prevalence of the topics by party over these ten years (2010-2020). In addition to showing party-specific trends in topical focus over time, Figure 4 also shows that the topic coverage of parties converges in 2015 and 2016. Three explanations may shed light to why we see this trend. The first relates to significant external developments that are relevant to UK national interests, such as the Syrian refugee crisis in Europe. As a result, certain topics related to migration enter the agenda as large-scale national issues that are relevant to all parties. Secondly, as usually occurs towards general election, all parties discuss broadly similar agenda points which are found at the core of the political discourse. Lastly, the Brexit referendum in 2016 drastically changed the context for many kinds of policies on a national level. This means that some topics of migration, such as economic migration, become important for the whole UK and all parties. 
+
+
+## 6. Sentiment
+
+Using the Lexicoder 2015 sentiment dictionary, average sentiment scores are computed for each document. We map sentiment scores by party throughout the years and find several trends that are worth mentioning. Interestingly, the Conservative party exhibits an overall more positive sentiment that increases gradually over the years compared to the Labour party. Further, the Liberal democratic party (LibDem), the Scottish National Party (SNP) and the Democratic Unionist Party (DUP) exhibit a more fluctuating sentiment toward immigration related topics. Specifically, before the general election, both SNP and DUP had more negative sentiment toward immigration.
+
+```{r figure 5, echo=FALSE, message=FALSE}
+
+HoC_data$date <- as.Date(HoC_data$date, format="%Y-%m-%d")
+
+HoC_senti_data_party <- data.frame(
+  date = HoC_data$date, 
+  party = HoC_data$party,
+  sentiment = HoC_data$sentiment)
+
+HoC_senti_data_party <- HoC_senti_data_party %>% 
+  group_by(month=floor_date(date, "month"), party = party) %>% 
+  summarise(avg_sentiment = mean(sentiment))
+
+party_senti_plot <- ggplot(HoC_senti_data_party)+
+  geom_line(aes(x=month, y=avg_sentiment, color = party), show.legend = TRUE) +
+  labs(title = "Observed Sentiment By Party",
+       x= "Year (by month)",
+       y= "Sentiment Score")+
+  geom_vline(aes(xintercept = as.numeric(as.Date("2015-05-07")),color = "General Election 2015"), linetype = "dashed")+
+  geom_vline(aes(xintercept = as.numeric(as.Date("2016-06-23")),color = "Brexit Referendum"), linetype = "dashed")+
+  scale_color_manual(name = "", values = c(part.col, "General Election 2015"="black","Brexit Referendum"="red"))+
+  theme(axis.text.x = element_text(angle = 90))
+
+party_senti_plot <- ggplotly(party_senti_plot)
+party_senti_plot
+
+```
+<font size="2">Figure 5: Observed sentiment by party.</font>
+
+However, we face a challenge when interpreting party-sentiment trends because the sentiment score combines both the sentiment associated with the subjects of these debates as well as the words used that present speakers’ attitudes on these subjects. For example, an MP who is supportive of helping victims of human trafficking may mention specific phrases, such as “human trafficking,” which are associated with negative sentiment. This presents a key challenge for interpreting sentiment simply as attitude towards migration and highlights the importance of disentangling these effects.
+
+
+```{r kwic 1, fig.show='hide', message=FALSE, warning=FALSE, include=FALSE, results='hide'}
+# Create KWIC - Dataframe, Corpus and Dfm
+#rerun general corpus to include sentiment
+HoC_corp <- corpus(HoC_data)
+
+#remove weird strings - only relevant for kwic as we want to analyze sentiment by keywords.
+
+HoC_corp <- gsub("[[:punct:]]â"," ", HoC_corp) # manually retrieved by investigating unique keyword-strings 
+HoC_corp <- gsub("([œ])","", HoC_corp)
+HoC_corp <- gsub("([â])","", HoC_corp)
+
+HoC_kwic <- kwic(HoC_corp, 
+                 paste(key_words_img,collapse="|"), 
+                 window = 20,
+                 split_hyphens = TRUE)
+
+HoC_kwic_data <- tibble(speaker = HoC_kwic$docname, 
+                  text = paste(HoC_kwic$pre, 
+                               HoC_kwic$post, sep = " "),
+                  keyword = HoC_kwic$keyword,
+                  docname = HoC_kwic$docname) 
+```
+
+```{r kwic 2, fig.show='hide', message=FALSE, warning=FALSE, include=FALSE, results='hide'}
+# Subset KWIC according to keywords
+
+imm <- c("immigra*","Immigra*")
+refu <- c("refugee*","Refugee*")
+asyl <- c("asylum","Asylum")
+
+kwic_imm <- filter(HoC_kwic_data,
+                   grepl(paste(imm,collapse="|"), keyword))
+
+kwic_refu <- filter(HoC_kwic_data,
+                   grepl(paste(refu,collapse="|"), keyword))
+kwic_asyl <- filter(HoC_kwic_data,
+                   grepl(paste(asyl,collapse="|"), keyword))
+
+```
+
+```{r kwic 3, fig.show='hide', message=FALSE, warning=FALSE, include=FALSE, results='hide'}
+# make individual corpora
+kwic_imm_corp <- corpus(kwic_imm)
+kwic_refu_corp <- corpus(kwic_refu)
+kwic_asyl_corp <- corpus(kwic_asyl)
+
+```
+
+
+```{r kwic 4, fig.show='hide', message=FALSE, warning=FALSE, include=FALSE, results='hide'}
+# Sentiment  Keywords in Context of keyword
+
+kwic_imm_senti <- textstat_polarity(kwic_imm_corp, 
+                                    data_dictionary_LSD2015)
+kwic_refu_senti <- textstat_polarity(kwic_refu_corp, 
+                                    data_dictionary_LSD2015)
+kwic_asyl_senti <- textstat_polarity(kwic_asyl_corp, 
+                                    data_dictionary_LSD2015)
+
+
+# add sentiments to initial data frame
+
+kwic_imm <- cbind(kwic_imm, kwic_imm_senti) 
+kwic_refu <- cbind(kwic_refu, kwic_refu_senti)
+kwic_asyl <- cbind(kwic_asyl, kwic_asyl_senti)
+
+## add date and party 
+
+doc_id_date <- data.frame(date = HoC_data$date,
+                          docname = HoC_data$doc_id, 
+                          party = HoC_data$party) # add date column to kwic
+
+kwic_imm_fv <- merge(kwic_imm, 
+                     doc_id_date, 
+                     by = "docname", 
+                     all.x = TRUE, 
+                     sort = FALSE)
+kwic_refu_fv <- merge(kwic_refu, 
+                     doc_id_date, 
+                     by = "docname", 
+                     all.x = TRUE, 
+                     sort = FALSE)
+kwic_asyl_fv <- merge(kwic_asyl, 
+                     doc_id_date, 
+                     by = "docname", 
+                     all.x = TRUE, 
+                     sort = FALSE)
+
+```
+
+
+```{r figure 6,  echo=FALSE, message=FALSE}
+# Graph Sentiment by keywords
+kwic_senti <- data.frame(kwic_imm_fv %>% 
+  group_by(month=floor_date(date, "year")) %>% 
+  summarise(avg_sentiment = mean(sentiment)),
+kwic_refu_party <- kwic_refu_fv %>% 
+  group_by(month=floor_date(date, "year")) %>% 
+  summarise(avg_sentiment = mean(sentiment)),
+kwic_refu_party <- kwic_asyl_fv %>% 
+  group_by(month=floor_date(date, "year")) %>% 
+  summarise(avg_sentiment = mean(sentiment)))
+
+kwic_senti <- data.frame(date = kwic_senti$month, immigra = kwic_senti$avg_sentiment, refuge = kwic_senti$avg_sentiment.1 ,asylum = kwic_senti$avg_sentiment.2)
+
+kwic_senti$date <- as.Date(kwic_senti$date, format="%Y-%m-%d")
+
+keywords_plot <- ggplot(kwic_senti, aes(x=date)) +
+  geom_line(aes(y=immigra, color="Immigra*")) +
+  geom_line(aes(y=refuge, color = "Refuge*")) +
+  geom_line(aes(y=asylum, color = "Asylum" )) +
+  labs(title = "Observed Sentiment in Context of Keywords",
+       x= "Year",
+       y= "Sentiment Score")+
+  geom_vline(aes(xintercept = as.numeric(as.Date("2015-05-07")),color = "General Election 2015"), linetype = "dashed")+
+  geom_vline(aes(xintercept = as.numeric(as.Date("2016-06-23")),color = "Brexit Referendum"), linetype = "dashed")+
+  scale_color_manual(name = "", values = c("Immigra*"="darkred", "Refuge*" = "darkorange", "Asylum" = "black", "General Election 2015"="black","Brexit Referendum"="red"))+
+  theme(axis.text.x = element_text(angle = 90))
+
+
+keywords_plot <- ggplotly(keywords_plot)
+keywords_plot
+
+```
+<font size="2">Figure 6: Observed sentiment in the context of keywords.</font>
+
+Exploring the sentiment of text surrounding specific keywords, we see that, overall, sentiment becomes more positive over time. This plot also shows that while text surrounding the mention of immigration has relatively low sentiment, sentences that mention refugees have more positive sentiment.
+
+To explore the sentiment related to specific types of migration-related debate in more depth, we apply our sentiment estimates to the topics generated by our topic model. To do this, we calculate the correlation of sentiment scores and topic scores for all documents in the subset.
+
+```{r table 1, echo=FALSE, message=FALSE}
+# sentiment and Topics: Correlation
+cor_sent_top_1 <- cor(theta_data_party[1],theta_data_party$sentiment)
+cor_sent_top_2 <- cor(theta_data_party[2],theta_data_party$sentiment)
+cor_sent_top_3 <- cor(theta_data_party[3],theta_data_party$sentiment)
+cor_sent_top_4 <- cor(theta_data_party[4],theta_data_party$sentiment)
+cor_sent_top_5 <- cor(theta_data_party[5],theta_data_party$sentiment)
+cor_sent_top_6 <- cor(theta_data_party[6],theta_data_party$sentiment)
+cor_sent_top <- rbind(cor_sent_top_1,cor_sent_top_2,cor_sent_top_3,cor_sent_top_4,cor_sent_top_5,cor_sent_top_6)
+colnames(cor_sent_top) = "correlations"
+cor_sent_top
+```
+<font size="2">Table 1: Correlation of sentiments and topics.</font>
+
+The result presents estimates of correlation between positive sentiment and each topic category. The topic of economic migration shows the strongest correlation with positive sentiment (0.148). This makes substantive sense, as many sectors of the UK benefit economically from migration. Discussion about economic migration in parliament would therefore enjoy a generally positive sentiment. In contrast, discussion related to the humanitarian concerns of migration show a strong, inverse correlated with positive sentiment (-0.098). This means that the increased prevalence of this topic in debate is paired with increasingly negative sentiment. Substantively speaking, this might indicate that members of parliament are overall concerned about the humanitarian risks of migration and wish to avoid or prevent them. Alternatively, this estimate may have nothing to do with how MPs discuss the topic of humanitarian risks and instead be showing the sentiment of words that are the subject matter of humanitarian risks, which are probably associated with negative sentiment. The topic containing procedural vocabulary is correlated with neutral sentiment (-0.002). As these words contain no valuable content, this makes sense and affirms our understanding of these topic-sentiment correlation estimates. The topics of social welfare and refugees fleeing conflict both show slightly negative correlations with sentiment (both are -0.012), possibly indicating mixed stances on these topics in parliament that overall verge negative. While the topic titled “tb, sikh, Auschwitz” has a score of fairly strong negative sentiment correlation, it is difficult to make any conclusions on this because the topic is inconsistent and contains multiple subjects of debate.
+
+<p style="font-family: times, serif; font-size:14pt; font-style:italic">
+    Looking for a statistically questionable, and frankly undergraduate-level regression to mislead your favorite policy makers? Simply refer to the topic-section in the appendix, where we included some seductive, prettily colored graphs. 
+</p>
+
+## 7. Conclusion & Shortcomings
+
+Our exploratory study presents the value of using topic models and sentiment analysis to inform coalition building for policymakers working on immigration-related policy. This is particularly valuable today, in the wake of the COVID-19 crisis and Britain’s exit from the EU becoming a reality, as the importance of immigration—specifically economic immigration—is likely to increase dramatically in parliament.
+
+Testing these methods, we learn that immigration-related debates became increasingly prevalent over the years between 2010 and 2020, with a massive increase from 2015 onwards. This trend is correlated to an increase in discussions over refugees fleeing conflict areas and the humanitarian concerns associated with these events. Furthermore, we show that following the results of the Brexit referendum, attention to refugees decreased relative to the topic of economic migration, which suddenly attracted more attention. We also find that while economic migration is framed in more positive language, the humanitarian concerns of migration are correlated with negative sentiment.
+
+However, a more fine-tuned approach is necessary for extracting meaningful insights for coalition building around immigration policy. This is especially important in terms of focusing sentiment analysis on language that expresses party attitudes towards migration-related topics, rather than the words that capture the subject matter of these topics. Thus, further research should pose more specific questions to differentiate these two elements of sentiment. This more targeted approach is likely to yield more accurate estimations.
+
+
+## References
+
+Bara, J., Weale, A., & Bicquelet, A. (2007). Analysing parliamentary debate with computer assistance. Swiss Political Science Review, 13(4), 577-605.
+
+Grierson, J. (2020). Post-Brexit key worker shortage 'may hamper UK economic recovery'. The Guardian. https://www.theguardian.com/politics/2020/dec/15/post-brexit-key-worker-shortage-may-hamper-uk-economic-recovery
+
+Heidenreich, T., Eberl, J. M., Lind, F., & Boomgaarden, H. (2020). Political migration discourses on social media: a comparative perspective on visibility and sentiment across political Facebook accounts in Europe. Journal of Ethnic and Migration Studies, 46(7), 1261-1280.
+
+UK Parliament. (2020). List of previous Commons Recess Dates. https://www.parliament.uk/about/faqs/house-of-commons-faqs/business-faq-page/recess-dates/list-of-previous-commons-recess-dates/
+
+UNHCR. (2020). Mediteranian Situation. https://data2.unhcr.org/en/situations/mediterranean 
+
+Sabsted, D. (2020). Is Brexit Britain pro-immigration and what does it mean for business? Relocate Global. https://www.relocatemagazine.com/articles/enterprise-is-brexit-britain-pro-immigration-and-what-does-it-mean-for-business-dsapsted-au20
+
+Young, L. & Soroka, S. (2012). Affective News: The Automated Coding of Sentiment in Political Texts. Political Communication, 29(2), 205--231.
+
+
+## Appendix
+
+
+### Further descriptive insights
+
+```{r appendix 1, echo=FALSE, message=FALSE, warning=FALSE}
+# *Plot 1:* Prevalence of immigration debates over time by month | Counting documents
+HoC_data$date <- as.Date(HoC_data$date, format="%Y-%m-%d")
+
+doc_sum_by_month = HoC_data %>% 
+  group_by(month=floor_date(date, "month")) %>% 
+  summarise(frequency = n()) 
+
+descr_plot_1 <- xts(x = doc_sum_by_month$frequency, order.by = doc_sum_by_month$month)
+names(descr_plot_1) <- "# unique contributions"
+
+dygraph(descr_plot_1, 
+             main = "Prevalence of immigration debates <small>(by number of unique contributions)</small>", 
+             ylab =  "# of words spent on immigration-realted debates", xlab = "Year (by month)") %>% 
+  dyOptions(labelsUTC = TRUE, fillGraph=TRUE, fillAlpha=0.4, drawGrid = FALSE, colors="#69b3a2") %>%
+  dyRangeSelector() %>%
+  dyCrosshair(direction = "vertical") %>%
+  dyHighlight(highlightCircleSize = 5, highlightSeriesBackgroundAlpha = 0.2, hideOnMouseOut = FALSE)  %>%
+  dyEvent(x="2015-05-07", label = "General Election 2015")%>%
+  dyEvent(x="2016-06-23", label = "Brexit Referendum", color = "red")
+
+```
+
+```{r appendix 2, echo=FALSE, message=FALSE, warning=FALSE}
+#*Plot 2:* Prevalence of immigration debates over time by month | Counting unique agenda points
+HoC_data$date <- as.Date(HoC_data$date, format="%Y-%m-%d")
+
+sum_by_agenda = HoC_data %>% 
+  group_by(month=floor_date(date, "month"), agenda = agenda) %>% 
+  summarise(frequency = n()) 
+
+doc_sum_by_agenda = sum_by_agenda %>% 
+  group_by(month=floor_date(month, "month")) %>% 
+  summarise(frequency = n()) 
+
+descr_plot_2 <- xts(x = doc_sum_by_agenda$frequency, order.by = doc_sum_by_agenda$month)
+names(descr_plot_2) <- "# unique debates"
+
+dygraph(descr_plot_2, 
+             main = "Prevalence of immigration debates <small>(by number of unique debates)</small>", 
+             ylab =  "# of words spent on immigration-realted debates", xlab = "Year (by month)") %>% 
+  dyOptions(labelsUTC = TRUE, fillGraph=TRUE, fillAlpha=0.4, drawGrid = FALSE, colors="#69b3a2") %>%
+  dyRangeSelector() %>%
+  dyCrosshair(direction = "vertical") %>%
+  dyHighlight(highlightCircleSize = 5, highlightSeriesBackgroundAlpha = 0.2, hideOnMouseOut = FALSE)  %>%
+  dyEvent(x="2015-05-07", label = "General Election 2015")%>%
+  dyEvent(x="2016-06-23", label = "Brexit Referendum", color = "red")
+```
+
+### Further insights on sentiment & topics
+
+```{r kwic sentiment by party immigra, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE, results='hide'}
+
+kwic_imm_fv$date <- as.Date(kwic_imm_fv$date, format="%Y-%m-%d")
+
+kwic_imm_party <- kwic_imm_fv %>% 
+  group_by(month=floor_date(date, "month"), party = party) %>% 
+  summarise(avg_sentiment = mean(sentiment))
+
+kwic_imm_plot <- ggplot(kwic_imm_party)+
+  geom_line(aes(x=month, y=avg_sentiment,color = party)) +
+  labs(title = "Observed Sentiment in context of immigra* by party",
+       caption = "dashed line (black = 2015 general election, red = Brexit referendum",
+       x= "Date",
+       y= "Sentiment Score")+
+  geom_vline(aes(xintercept = as.numeric(as.Date("2015-05-07")),color = "General Election 2015"), linetype = "dashed")+
+  geom_vline(aes(xintercept = as.numeric(as.Date("2016-06-23")),color = "Brexit Referendum"), linetype = "dashed")+
+  scale_color_manual(name = "", values = c(part.col, "General Election 2015"="black","Brexit Referendum"="red"))+
+  theme(axis.text.x = element_text(angle = 90))
+
+kwic_imm_plot <- ggplotly(kwic_imm_plot)
+kwic_imm_plot
+
+```
+
+```{r kwic sentiment by party refuge, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE, results='hide'}
+
+kwic_refu_fv$date <- as.Date(kwic_refu_fv$date, format="%Y-%m-%d")
+
+kwic_refu_party <- kwic_refu_fv %>% 
+  group_by(month=floor_date(date, "month"), party = party) %>% 
+  summarise(avg_sentiment = mean(sentiment))
+
+kwic_refu_plot <- ggplot(kwic_refu_party)+
+  geom_line(aes(x=month, y=avg_sentiment,color = party)) +
+  labs(title = "Observed Sentiment in context of refuge* by party",
+       caption = "dashed line (black = 2015 general election, red = Brexit referendum",
+       x= "Date",
+       y= "Sentiment Score")+
+   geom_vline(aes(xintercept = as.numeric(as.Date("2015-05-07")),color = "General Election 2015"), linetype = "dashed")+
+  geom_vline(aes(xintercept = as.numeric(as.Date("2016-06-23")),color = "Brexit Referendum"), linetype = "dashed")+
+  scale_color_manual(name = "", values = c(part.col, "General Election 2015"="black","Brexit Referendum"="red"))+
+  theme(axis.text.x = element_text(angle = 90))
+
+kwic_refu_plot <- ggplotly(kwic_refu_plot)
+kwic_refu_plot
+
+```
+
+```{r kwic sentiment by party asylum, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE, results='hide'}
+
+kwic_asyl_fv$date <- as.Date(kwic_asyl_fv$date, format="%Y-%m-%d")
+
+kwic_asyl_party <- kwic_asyl_fv %>% 
+  group_by(month=floor_date(date, "month"), party = party) %>% 
+  summarise(avg_sentiment = mean(sentiment))
+
+kwic_asyl_plot <- ggplot(kwic_asyl_party)+
+  geom_line(aes(x=month, y=avg_sentiment,color = party)) +
+  labs(title = "Observed Sentiment in context of asylum by party",
+       x= "Date",
+       y= "Sentiment Score",
+       caption = "dashed line (black = 2015 general election, red = Brexit referendum")+
+   geom_vline(aes(xintercept = as.numeric(as.Date("2015-05-07")),color = "General Election 2015"), linetype = "dashed")+
+  geom_vline(aes(xintercept = as.numeric(as.Date("2016-06-23")),color = "Brexit Referendum"), linetype = "dashed")+
+  scale_color_manual(name = "", values = c(part.col, "General Election 2015"="black","Brexit Referendum"="red"))+
+  theme(axis.text.x = element_text(angle = 90))
+
+kwic_asyl_plot <- ggplotly(kwic_asyl_plot)
+kwic_asyl_plot
+
+```
+
+```{r appendix 4, eval=FALSE, include=FALSE}
+# Sentiment only for refugee* by party
+refu <- c("refugee*","Refugee*")
+refugee <- filter(HoC_corp_time, grepl(paste(refu,collapse="|"), agenda) | grepl(paste(refu,collapse="|"), text))
+refcorp <- corpus(refugee)
+
+ref_sent <- textstat_polarity(refcorp, 
+                              data_dictionary_LSD2015)
+ref_sent$sent_prob <- 1/(1 + exp(-ref_sent$sentiment))
+
+refugee = cbind(refugee,ref_sent)
+
+refugee$date <- as.Date(refugee$date, format="%Y-%m-%d")
+ref_party_df <- data.frame(date = refugee$date, party = refugee$party ,sentiment = refugee$sentiment)
+ref_party = ref_party_df %>% group_by(month=floor_date(date, "month"), party = party) %>% summarise(avg_sentiment = mean(sentiment))
+
+ggplot(ref_party)+
+  geom_line(aes(x=month, y=avg_sentiment,group = party), colour = "grey",size = 1) +
+  geom_line(data = subset(ref_party, party == "Con") ,aes(x=month, y=avg_sentiment,group = party), colour = "red",size = 1) +
+  geom_line(data = subset(ref_party, party == "Lab") ,aes(x=month, y=avg_sentiment,group = party), colour = "blue",size = 1) +
+  labs(title = "Observed Sentiment in refugee*- related contributions overall by party",
+       subtitle = "Conservative = red, Labour = blue",
+       caption = "dashed line (black = 2015 general election, red = Brexit referendum")+
+  geom_vline(xintercept = as.Date("2015-05-07"), linetype = "dashed")+ #general election 2015
+  geom_vline(xintercept = as.Date("2016-06-23"), linetype = "dashed", color = "red")+ # Brexit referendum
+  theme(axis.text.x = element_text(angle = 90))
+
+```
+
+```{r sentiment graph 1, eval=FALSE, fig.show='hide', message=FALSE, warning=FALSE, include=FALSE, results='hide'}
+
+HoC_data$date <- as.Date(HoC_data$date, format="%Y-%m-%d")
+HoC_senti_data <- data.frame(date = HoC_data$date, 
+                           sentiment = HoC_data$sentiment)
+
+HoC_senti_data_month = HoC_senti_data %>% 
+  group_by(month=floor_date(date, "month")) %>% 
+  summarise(avg_sentiment = mean(sentiment))
+
+
+senti <- ggplot(HoC_senti_data_month, aes(x=month, y=avg_sentiment))+
+  geom_area( fill="#69b3a2", alpha=0.4, aes(group=1)) +
+  geom_line(color="#69b3a2",aes(group=1)) +
+  labs(title = "Plot 3. Observed Sentiment (overall)",
+       x= "Date",
+       y= "Sentiment Score")+
+  geom_vline(aes(xintercept = as.numeric(as.Date("2015-05-07")),color = "General Election 2015"), linetype = "dashed")+
+  geom_vline(aes(xintercept = as.numeric(as.Date("2016-06-23")),color = "Brexit Referendum"), linetype = "dashed")+
+  scale_color_manual(name = "", values = c("General Election 2015" = "black", "Brexit Referendum" = "red"))+
+  theme(axis.text.x = element_text(angle = 90))
+
+senti <- ggplotly(senti)
+senti
+```
+
+```{r word clouds, eval=FALSE, include=FALSE}
+####################################
+# EXTRA CODE ON KWIC /  Wordclouds #
+####################################
+
+*KWIC - Wordcloud incl. keywords*
+textplot_wordcloud(HoC_kwic_dfm, max_words = 90, color = rev(RColorBrewer::brewer.pal(10, "RdBu")))
+```
+```{r kwic_2, eval=FALSE, include=FALSE}
+
+*KWIC - Wordcloud excl. keywords*
+
+HoC_kwic_dfm_no_key <- dfm(HoC_kwic_corp,
+                       remove_punct = TRUE,
+                       remove = c(as.vector(key_words_img),stopwords()),
+                       remove_symbols = TRUE,
+                       remove_separators = TRUE,
+                       split_hyphens = TRUE,
+                       remove_numbers = TRUE)
+
+textplot_wordcloud(HoC_kwic_dfm_no_key, max_words = 90, color = rev(RColorBrewer::brewer.pal(10, "RdBu")))
+```
+
+```{r kwic co-concurrence matrix, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE}
+*Plot: Top words kwic co-concurrence matrix*
+HoC_kwic_fcm <-
+  tokens(HoC_kwic_corp, remove_punct = TRUE) %>%
+  tokens_tolower() %>%
+  tokens_remove(stopwords("english"), padding = FALSE) %>%
+  fcm(context = "window", window = 5, tri = FALSE)
+# choose 30 most frequency features
+topfeats <- names(topfeatures(HoC_kwic_fcm, 30))
+# select the top 30 features only, plot the network
+set.seed(100)
+textplot_network(fcm_select(HoC_kwic_fcm, topfeats), min_freq = 0.8)
+```
+
+
+The underlying code of the following figures tries to investigate the relation between sentiments and topic, and how that changes by parties. This does not aim to show causal relations but to provide the reader with an intuition how sentiment regarding different topics vary between parties, and, depending on the topic discussed. 
+
+```{r dataframes for lm, message=FALSE, warning=FALSE, include=FALSE}
+#Data frames for lm models*
+
+# filter sentiment data frame
+theta_data_long_reg <- theta_data_long %>%
+  filter(party == "Con" | party == "Lab" |  party == "LibDem" | party == "SNP" | party == "DUP")
+#subset data to just one topic (1)
+sentiment_topic1 <- theta_data_long_reg %>%
+  filter(topic == names(HoC_theta_data)[1])
+#subset data to just one topic (2)
+sentiment_topic2 <- theta_data_long_reg %>%
+  filter(topic == names(HoC_theta_data)[2])
+#subset data to just one topic (3)
+sentiment_topic3 <- theta_data_long_reg %>%
+  filter(topic == names(HoC_theta_data)[3])
+#subset data to just one topic (4)
+sentiment_topic4 <- theta_data_long_reg %>%
+  filter(topic == names(HoC_theta_data)[4])
+#subset data to just one topic (5)
+sentiment_topic5 <- theta_data_long_reg %>%
+  filter(topic == names(HoC_theta_data)[5])
+#subset data to just one topic (6)
+sentiment_topic6 <- theta_data_long_reg %>%
+  filter(topic == names(HoC_theta_data)[6])
+```
+
+
+```{r lm to disern correlations between sentiment and topics, message=FALSE, warning=FALSE, include=FALSE}
+# disagregated by topic
+names(HoC_theta_data)[1]
+#lm for the 6 topics
+reg1 <- lm(sentiment~theta, data=sentiment_topic1)
+
+names(HoC_theta_data)[2]
+reg2 <- lm(sentiment~theta, data=sentiment_topic2)
+
+names(HoC_theta_data)[3]
+reg3 <- lm(sentiment~theta, data=sentiment_topic3)
+
+names(HoC_theta_data)[4]
+reg4 <- lm(sentiment~theta, data=sentiment_topic4)
+
+names(HoC_theta_data)[5]
+reg5 <- lm(sentiment~theta, data=sentiment_topic5)
+
+names(HoC_theta_data)[6]
+reg6 <- lm(sentiment~theta, data=sentiment_topic6)
+
+```
+
+```{r stargazer, echo=FALSE, message=FALSE, warning=FALSE}
+# stargazer 
+library(stargazer)
+stargazer(reg1, reg2, reg3, reg4, reg5, reg6, type="text")
+```
+*output table for lm models*
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+#plot for topic and sentiment
+ggplot(theta_data_long_reg,aes(y=sentiment,x=theta)) +
+  geom_smooth(method="lm", show.legend = FALSE) +
+  theme_bw() + 
+  xlab("Topic Theta Mean") +
+  ylab("Sentiment") +
+  ggtitle("Correlation Between Sentiment and Topic") +
+  facet_wrap(~topic)
+```
+*plot correlation between sentiment and topic*
+
+```{r plot lm, echo=FALSE, message=FALSE, warning=FALSE}
+#plot with all parties
+ggplot(theta_data_long_reg,aes(y=sentiment,x=theta, color = party, fill = party)) +
+  #geom_point() +
+  geom_smooth(method="lm") +
+  theme_bw() + 
+  xlab("Topic Theta Mean") +
+  ylab("Sentiment") +
+  ggtitle("Correlation Between Sentiment and Topic by Party") +
+  facet_wrap(~topic)
+```
+*plot correlation between sentiment and topic by party*
+
+```{r topic_by_party_plot_incl periods, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE}
+#Topics by party in periods before the election, before and after Brexit#
+
+## topic_by_party_plot: topic proportions by party 
+
+# grouping by party and generating means 
+theta_data_party <- HoC_theta_data %>%
+  group_by(party,date)
+
+
+theta_data_party_mean <- aggregate(theta_data_party[, 1:6], 
+                                   list(theta_data_party$party,theta_data_party$date ), 
+                                   mean)
+names(theta_data_party_mean)[1:2] <- c("party","date") 
+
+# Turning into a table of proportions
+theta_data_party_prop <- theta_data_party_mean[1:2] %>%
+  cbind(as.data.frame(
+    round(100*prop.table(theta_data_party_mean[3:8]),
+          digits=2)))
+
+# pivoting df for making figure
+party_prop_long <-theta_data_party_prop %>%
+  pivot_longer(c(3:8), 
+               names_to = "Topic", 
+               values_to = "Proportion")
+
+# visualizing proportions of topics by party
+party_prop_long %>%
+  ggplot(aes(party, Proportion, fill = Topic)) +
+  geom_bar(position = "fill", stat = "identity") +
+  scale_y_continuous() + 
+  theme(axis.text.x = element_text(angle = 45, 
+                                   hjust = 1,
+                                   size = 6))
+
+#subset main events
+prop_pre_elec <- subset(party_prop_long, date <= as.Date("2015-05-07") & date >= as.Date("2014-05-07"))
+prop_pre_brex <- subset(party_prop_long, date <= as.Date("2016-06-23") & date >= as.Date("2015-06-23"))
+prop_post_brex <- subset(party_prop_long, date <= as.Date("2017-06-23") & date >= as.Date("2016-06-23"))
+
+prop_pre_elec %>%
+  ggplot(aes(party, Proportion, fill = Topic)) +
+  geom_bar(position = "fill", stat = "identity") +
+  scale_y_continuous() + 
+  theme(axis.text.x = element_text(angle = 45, 
+                                   hjust = 1,
+                                   size = 6))+
+  labs(title = "Topic prevalence by party",
+       subtitle = "pre election period 05.2014 - 05.2015")
+  
+  
+prop_pre_brex %>%
+  ggplot(aes(party, Proportion, fill = Topic)) +
+  geom_bar(position = "fill", stat = "identity") +
+  scale_y_continuous() + 
+  theme(axis.text.x = element_text(angle = 45, 
+                                   hjust = 1,
+                                   size = 6))+
+  labs(title = "Topic prevalence by party",
+       subtitle = "pre brexit period 06.2015 - 06.2016")    
+
+prop_post_brex %>%
+  ggplot(aes(party, Proportion, fill = Topic)) +
+  geom_bar(position = "fill", stat = "identity") +
+  scale_y_continuous() + 
+  theme(axis.text.x = element_text(angle = 45, 
+                                   hjust = 1,
+                                   size = 6))+
+  labs(title = "Topic prevalence by party",
+       subtitle = "post brexit period 06.2016 - 06.2017")   
+
+```
+
+```{r topics_by_time_plot, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE}
+#Average Topic prevalence over time*
+
+theta_data_long <- pivot_longer(
+  HoC_theta_data, 
+  cols = names(HoC_theta_data[1:6]), 
+  names_to = "topic",
+  values_to = "theta")
+
+# plot topic theta means over years
+theta_long_data_year <- theta_data_long %>%
+  mutate(year = str_sub(date, 1, 4)) %>%
+  group_by(year, topic) %>% 
+  summarise(theta.means = mean(theta))
+
+
+ggplot(theta_long_data_year,aes(x=year, y=theta.means, group = 1), color = "black") + 
+  geom_line(size = 1) +
+  geom_vline(xintercept = "2015", linetype = "dashed")+ #general election 2015
+  geom_vline(xintercept = "2016", linetype = "dashed", color = "red")+# Brexit referendum
+  theme(axis.text.x = element_text(angle = 90),
+        legend.position = "none")+
+  labs(title = "Topic Prevalence",
+       x= "Year",
+       y= "Theta")+
+  facet_wrap(~topic)
+```
+
+```{r topic insights, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE}
+#*Insights into Topics*
+
+# extract paragraphs most aligned with each topic
+thoughts <- findThoughts(topic_mod_1, texts = texts(HoC_corp), n=1, topics = c(1:6))#n=how many documents
+stm::plotQuote(thoughts$docs, width = 80, text.cex=0.6)
+save(thoughts, file = "thoughts.RData")
+
+# wordcloud textplot_wordcloud
+cloud(topic_mod_1, topic = 6, max_words = 90, color = c(color =rev(RColorBrewer::brewer.pal(10, "RdBu"))))
+
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.

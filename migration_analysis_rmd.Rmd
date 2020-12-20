@@ -1,13 +1,11 @@
 ---
 title: "Immigration related debates in UK HOC"
 author: "Amir, Ofer, Jan"
-date: "12/11/2020"
+date: "20/11/2020"
 output:
   prettydoc::html_pretty:
     theme: hpstr
-    highlight: github
-    fig_caption: yes
-
+    fig_caption: true
 ---
 
 ```{r setup, include=FALSE}
@@ -37,12 +35,12 @@ With this, we aim at capturing changes in the prevalence of migration-related de
 Our exploration is based on the HoC-related dataset from a database called ParlSpeech V2 by Christian Rauh and Jan Schwalbach (2020). This dataset is unique in its scope, covering all parliamentary debates from 1998 and up until 2020, resulting in 1,956,223 speeches (Rauh & Schwalbach, 2020, p. 10). Speeches represent individual contributions by members of parliament and were collected from the digital Commons Hansard, which contains the plenary protocols and documents from which speech texts and metadata are extracted. As a result, the corpus includes a range of covariates like party affiliation and agenda, which facilitate a detailed set of context and party-specific analyses. In our analysis, we make use of these metadata and leverage the Lexicoder 2015 sentiment dictionary, which was established to produce reliable estimates based on 2,858-word patterns relating to negative sentiment and 1,709-word patterns indicating positive sentiment (Young & Soroka, 2012). This sentiment dictionary is particularly relevant to our purposes as it was designed to analyze sentiment in political language of legislative speech   and has been applied specifically to migration discourse (Heidenreich et al., 2020). 
 
 ```{r packages, fig.show='hide', message=FALSE, warning=FALSE, include=FALSE, results='hide'}
+library(tidyverse)
 library(quanteda)
 library(quanteda.textmodels)
 library(quanteda.sentiment)
 library(quanteda.textstats)
 library(readtext)
-library(tidyverse)
 library(stm)
 library(lubridate)
 library(lme4)

@@ -176,7 +176,7 @@ contr_brex <- sum(HoC_data$terms[HoC_data$date <= "2016-06-23" & HoC_data$date >
 
 *Plot 1: Prevalence of immigration debates over time by month | Total number of words as a proxy for time spent on debating.* 
 
-```{r plot 3, echo=FALSE, message=FALSE}
+```{r plot 1, echo=FALSE, message=FALSE}
 
 HoC_data$date <- as.Date(HoC_data$date, format="%Y-%m-%d")
 
@@ -188,7 +188,7 @@ descr_plot <- xts(x = doc_sum_by_words$word_sum, order.by = doc_sum_by_words$mon
 names(descr_plot) <- "# words"
 
 dygraph(descr_plot, 
-             main = "Contributions to immigration-related debates <small>(As 6-month-averages)</small>",
+             main = "Plot 1. Contributions to immigration-related debates <small>(As 6-month-averages)</small>",
              ylab =  "# of words", xlab = "Year (by month)") %>% 
   dyOptions(labelsUTC = TRUE, fillGraph=TRUE, fillAlpha=0.4, drawGrid = FALSE, colors="#69b3a2") %>%
   dyRangeSelector() %>%
@@ -212,7 +212,7 @@ sum_by_party = HoC_data %>%
 # Plot
 ggplot(sum_by_party, aes(x = month, y = party, fill = party)) +
   geom_density_ridges(alpha=0.6) +
-  labs(title = "Contributions to immigration-related debates",
+  labs(title = "Plot 2. Contributions to immigration-related debates",
        subtitle = "by party",
        x= "Year (by month)",
        y= "Party")+
@@ -254,7 +254,7 @@ HoC_senti_data_month = HoC_senti_data %>%
 senti <- ggplot(HoC_senti_data_month, aes(x=month, y=avg_sentiment))+
   geom_area( fill="#69b3a2", alpha=0.4, aes(group=1)) +
   geom_line(color="#69b3a2",aes(group=1)) +
-  labs(title = "Observed Sentiment (overall)",
+  labs(title = "Plot 3. Observed Sentiment (overall)",
        x= "Date",
        y= "Sentiment Score")+
   geom_vline(aes(xintercept = as.numeric(as.Date("2015-05-07")),color = "General Election 2015"), linetype = "dashed")+
@@ -282,7 +282,7 @@ HoC_senti_data_party <- HoC_senti_data_party %>%
 
 party_senti_plot <- ggplot(HoC_senti_data_party)+
   geom_line(aes(x=month, y=avg_sentiment, color = party), show.legend = TRUE) +
-  labs(title = "Observed Sentiment by party",
+  labs(title = "Plot 4. Observed Sentiment by party",
        x= "Year (by month)",
        y= "Sentiment Score")+
   geom_vline(aes(xintercept = as.numeric(as.Date("2015-05-07")),color = "General Election 2015"), linetype = "dashed")+
@@ -410,7 +410,7 @@ keywords_plot <- ggplot(kwic_senti, aes(x=date)) +
   geom_line(aes(y=immigra, color="Immigra*")) +
   geom_line(aes(y=refuge, color = "Refuge*")) +
   geom_line(aes(y=asylum, color = "Asylum" )) +
-  labs(title = "Observed Sentiment in Context of Keywords",
+  labs(title = "Plot 5. Observed Sentiment in Context of Keywords",
        x= "Year",
        y= "Sentiment Score")+
   geom_vline(aes(xintercept = as.numeric(as.Date("2015-05-07")),color = "General Election 2015"), linetype = "dashed")+
@@ -563,7 +563,7 @@ theta_long_data_year_1 <- theta_data_long %>%
 # plot all parties together (plot by topic, color by party)
 k <- ggplot()  +
   geom_line(data = theta_long_data_year_1, aes(x=year, y = theta.means, group=party, color = party)) +
-   labs(title = "Topic Prevalence",
+   labs(title = "Plot 6. Topic Prevalence",
        x= "Year",
        y= "Theta")+
   geom_line(data = theta_long_data_year,aes(x=year, y=theta.means, group = 1, color = "Average Prevalence")) +

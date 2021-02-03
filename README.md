@@ -1,4 +1,4 @@
-Ofer Dotan, Jan Panhuysen & Amir Firestone
+Ofer Dotan, Jan Panhuysen & Amir Firestone, December 2020
 
 # Text analysis UK HoC debates
 Text analysis of UK House of Commons (HoC)parliamentary debates from 2010 to 2020
